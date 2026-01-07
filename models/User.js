@@ -19,7 +19,7 @@ const userSchema = new Schema({
     },
     OwnedTopics: Array,
     SubOwnedTopics: Array
-});
+}, {timestamps: true});
 
 module.exports = model("User", userSchema);
 
