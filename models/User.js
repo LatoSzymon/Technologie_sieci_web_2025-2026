@@ -18,7 +18,11 @@ const userSchema = new Schema({
         default: "user"
     },
     OwnedTopics: Array,
-    SubOwnedTopics: Array
+    SubOwnedTopics: Array,
+    isApprovedByAdmin: {
+        type: Boolean,
+        default: false
+    }
 }, {timestamps: true});
 
 module.exports = model("User", userSchema);
