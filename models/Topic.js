@@ -7,6 +7,10 @@ const topicSchema = new Schema({
         default: "A topic with no name",
         unique: true
     },
+    description: {
+        type: String,
+        default: ''
+    },
     ownerId: [
         {
             type: Schema.Types.ObjectId,
@@ -28,6 +32,13 @@ const topicSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "Topic"
     },
+    children: [{
+        type: Schema.Types.ObjectId,
+        ref: "Topic"
+    }],
+    tags: [{
+        type: String
+    }],
     isClosed: {
         type: Boolean,
         default: false
