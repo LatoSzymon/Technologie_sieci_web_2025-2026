@@ -82,5 +82,29 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select('-hash');
+
+        if (!user) {
+            return res.status(404).json({message: 'Takiego użytkownika nie ma'});
+        }
+
+        return res.status(200).json({user});
+    } catch (eror) {
+        return res.status(500).json({message: "Błąd przy komunikacji z serwerem", eror});
+    }
+};
+
+const logout = (req, res) => {
+    res.clearCookie("jwt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict'
+    });
+
+    return res.status(200).json({message: "Wylogowano"});
+};
+
+module.exports = { register, login, getMe, logout };
 

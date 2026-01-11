@@ -30,4 +30,13 @@ const auth = (req, res, next) => {
     } catch (error) {
         return res.status(500).json({message: "Błąd przy autoryzacji tokenu", error});
     }
+};
+
+const isAdmin = (req, res, next) => {
+    if (req.user?.role !== 'admin') {
+        return res.status(403).json({message: "Odmowa dostępu. Tresci tylko dla adminów"});
+    }
+    next();
 }
+
+module.exports = {auth, isAdmin};
