@@ -31,7 +31,7 @@ const approveUser = async (req, res) => {
 const blockUser = async (req, res) => {
     try {
         const id = req.params.id;
-        const user = User.findByIdAndUpdate( {id}, {isBlocked: true}, {new: true, select: '-hash'});
+        const user = await User.findByIdAndUpdate( id, {isBlocked: true}, {new: true, select: '-hash'});
         if (!user) {
             return res.status(404).json({message: "Użytkownik nie został znaleziony"});
         }
@@ -45,7 +45,7 @@ const blockUser = async (req, res) => {
 const unblockUser = async (req, res) => {
     try {
         const id = req.params.id;
-        const user = User.findByIdAndUpdate( {id}, {isBlocked: false}, {new: true, select: '-hash'});
+        const user = await User.findByIdAndUpdate( id, {isBlocked: false}, {new: true, select: '-hash'});
         if (!user) {
             return res.status(404).json({message: "Użytkownik nie został znaleziony"});
         }
