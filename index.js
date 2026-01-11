@@ -10,9 +10,11 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const path = require('path');
+const passport = require('./passport');
 
 const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const topicRoutes = require('./routes/topicRoutes');
 
 const app = express();
 app.use(morgan("dev"));
@@ -20,9 +22,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookie_parser());
+app.use(passport.initialize());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/topics', topicRoutes);
 
 const cert_keypath = path.join(__dirname, 'certificate', 'server.key');
 const cert_certpath = path.join(__dirname, 'certificate', 'server.crt');

@@ -78,3 +78,4 @@ const getTopicById = async (req, res) => {
     }
 };
 
+module.exports = { createTopic, listRootTopics, getTopicById };
