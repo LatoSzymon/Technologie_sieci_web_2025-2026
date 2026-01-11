@@ -27,6 +27,10 @@ app.use(passport.initialize());
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/', () => {
+    console.log("Kontrolny log");
+    
+})
 
 const cert_keypath = path.join(__dirname, 'certificate', 'server.key');
 const cert_certpath = path.join(__dirname, 'certificate', 'server.crt');

@@ -7,7 +7,7 @@ const opts = {
     jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         req => req.cookies?.jwt
-    ]), secret: process.env.JWT_SECRET
+    ]), secretOrKey: process.env.JWT_SECRET
 };
 
 passport.use(new JwtStrategy(opts, async (payload, done) => {
