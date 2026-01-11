@@ -8,9 +8,9 @@ const cors = require("cors");
 
 const app = express();
 app.use(morgan("dev"));
-app.use(cors())
+app.use(cors());
 
-const dbData = {
+const dbConnData = {
     host: process.env.MONGO_HOST || '127.0.0.1',
     port: process.env.MONGO_PORT || 27017,
     database: process.env.MONGO_DATABASE || 'ProgTalk'
