@@ -63,6 +63,10 @@ const login = async (req, res) => {
             return res.status(403).json({ message: "Konto nie zostało jeszcze zaakceptowane przez administratora" });
         }
 
+        if (user.isBlocked) {
+            return res.status(403).json({ message: "Konto zostało zablokowane przez administratora" });
+        }
+
         const token = jwt.sign(
             { userId: user.id, role: user.role },
             process.env.JWT_SECRET,
