@@ -5,10 +5,20 @@ const mongoose = require("mongoose");
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
+const cookie_parser = require("cookie-parser");
+const fs = require('fs');
+const https = require('https');
+
+const authRoutes = require('./routes/userRoutes');
 
 const app = express();
 app.use(morgan("dev"));
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+app.use(cookie_parser());
+
+app.use('/api/auth', authRoutes);
 
 const dbConnData = {
     host: process.env.MONGO_HOST || '127.0.0.1',
