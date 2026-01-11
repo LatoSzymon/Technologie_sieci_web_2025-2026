@@ -12,6 +12,7 @@ const http = require('http');
 const path = require('path');
 
 const authRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 app.use(morgan("dev"));
@@ -21,6 +22,7 @@ app.use(express.urlencoded({extended: true}));
 app.use(cookie_parser());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 const cert_keypath = path.join(__dirname, 'certificate', 'server.key');
 const cert_certpath = path.join(__dirname, 'certificate', 'server.crt');

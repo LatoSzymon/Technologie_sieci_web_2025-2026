@@ -55,3 +55,5 @@ const unblockUser = async (req, res) => {
         return res.status(500).json({message: "Błąd przy odblokowywaniu użytkownika", error});
     }
 };
+
+module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser};
