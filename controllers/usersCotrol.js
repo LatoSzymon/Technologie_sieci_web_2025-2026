@@ -69,7 +69,6 @@ const login = async (req, res) => {
             { expiresIn: "100m" }
         );
 
-        // Uwaga: w dev bez HTTPS secure: true zablokuje cookie; można ustawić warunkowo.
         res.cookie("jwt", token, {
             httpOnly: true,
             secure: true,
