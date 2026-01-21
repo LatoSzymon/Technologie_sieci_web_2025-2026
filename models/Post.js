@@ -6,13 +6,31 @@ const PostSchema = new Schema({
         ref: "Topic",
         required: true
     },
+    content: {
+        type: String,
+        required: true,
+    },
+    authorId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    likes: [{
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    }],
+    dislikes: [{
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    }],
+    isDeleted: {
+        type: Boolean,
+        default: false
+    }
 
-})
+
+}, {timestamps: true});
 
 
-// temat
-// tresc
-//idAutora
-// likes
-// dislikes
-//jakis znacznik wykasowania/zablokowania
+//na przyszłość, zrób mechanizm odpowiadania innym na posty
+
