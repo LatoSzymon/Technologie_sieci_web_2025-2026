@@ -1,6 +1,6 @@
 const {Schema, model} = require("mongoose");
 
-const PostSchema = new Schema({
+const postSchema = new Schema({
     topicId: {
         type: Schema.Types.ObjectId,
         ref: "Topic",
@@ -34,3 +34,4 @@ const PostSchema = new Schema({
 
 //na przyszłość, zrób mechanizm odpowiadania innym na posty
 
+module.exports = model("Post", postSchema);
