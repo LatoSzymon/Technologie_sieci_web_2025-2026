@@ -35,19 +35,25 @@ const register = async (req, res) => {
         await user.save();
         return res.status(201).json({ message: "Konto utworzone. Czeka na akceptację administratora." });
     } catch (err) {
+        console.error(err);
+        
         return res.status(500).json({message: "Błąd podczas rejestracji", err});
     }
 };
 
 const login = async (req, res) => {
     try {
-        const { mail, login, password } = req.body;
-        if ((!mail && !login) || !password) {
-            return res.status(400).json({ message: "Podaj mail lub login oraz hasło" });
+        const { loginOrEmail, password } = req.body;
+
+        if (!loginOrEmail || !password) {
+            return res.status(400).json({ message: "Podaj login lub email oraz hasło" });
         }
 
         const user = await User.findOne({
-            $or: [{ mail }, { login }],
+            $or: [
+            { mail: loginOrEmail },
+            { login: loginOrEmail }
+            ]
         });
 
         if (!user) {
