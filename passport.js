@@ -12,14 +12,14 @@ const opts = {
 
 passport.use(new JwtStrategy(opts, async (payload, done) => {
     try {
-        const user = await User.findById(payload.userId)
+        const user = await User.findById(payload.userId);
         if (user) {
             return done(null, {userId: user.id, role: user.role});
         } else {
-            return done(null, false)
+            return done(null, false);
         }
     } catch (err) {
-        return done(err, false)
+        return done(err, false);
     }
 }));
 

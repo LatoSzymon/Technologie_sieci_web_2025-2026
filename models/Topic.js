@@ -37,7 +37,8 @@ const topicSchema = new Schema({
         ref: "Topic"
     }],
     tags: [{
-        type: String
+        type: Schema.Types.ObjectId,
+        ref: "Tag"
     }],
     isClosed: {
         type: Boolean,
