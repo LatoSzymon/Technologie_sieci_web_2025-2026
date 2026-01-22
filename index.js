@@ -11,6 +11,7 @@ const https = require('https');
 const http = require('http');
 const path = require('path');
 const passport = require('./passport');
+const {Server} = require("socket.io");
 
 const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -39,11 +40,6 @@ app.use('/', () => {
 const cert_keypath = path.join(__dirname, 'certificate', 'server.key');
 const cert_certpath = path.join(__dirname, 'certificate', 'server.crt');
 
-const tlsOptions = {
-    key: fs.readFileSync(cert_keypath),
-    cert: fs.readFileSync(cert_certpath)
-};
-
 
 const dbConnData = {
     host: process.env.MONGO_HOST || '127.0.0.1',
@@ -69,6 +65,25 @@ mongoose
         };
 
         const httpsServ = https.createServer(tlsOptions, app);
+        const io = new Server(httpsServ, {
+            cors: {
+                origin: "*",     //placeholder
+                methods: ["GET", "POST"],
+                credentials: true
+            }
+        });
+
+        io.on("connection", (sock) => {
+            console.log("Nowe połączenie websocket");
+            sock.on("elo", () => {
+                sock.emit("żelo");
+            });
+
+            sock.on("disconnect", () => {
+                console.log("Socket rozłączony", sock.id);
+
+            });
+        });
 
         httpsServ.listen(https_port, () => {
             console.log(`API (https): https://localhost:${https_port}`);
@@ -76,7 +91,7 @@ mongoose
 
         http.createServer((req, res) => {
             const host = req.headers.host?.split(':')[0] || apiHost;
-            res.writeHead(301, {location: `https://${host}:${https_port}${req.url}`});
+            res.writeHead(301, {Location: `https://${host}:${https_port}${req.url}`});
             res.end();
         }).listen(apiPort, () => {
             console.log("Przekierowanie z http na https działa");
