@@ -16,6 +16,7 @@ const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const topicRoutes = require('./routes/topicRoutes');
 const postRoutes = require("./routes/postsRoutes");
+const tagRoutes = require("./routes/tagRoutes");
 
 const app = express();
 app.use(morgan("dev"));
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/tags', tagRoutes);
 app.use('/', () => {
     console.log("Kontrolny log");
     
