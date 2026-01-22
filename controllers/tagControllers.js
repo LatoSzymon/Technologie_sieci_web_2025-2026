@@ -20,7 +20,7 @@ const deleteTag = async (req, res) => {
         const deleted = await Tag.findByIdAndDelete(tagId);
         return res.status(204).json({message: "Usunięto tag", deleted});
     } catch (err) {
-        return res.status(500).json({message: "Usuwanie tagu nie powiodło się", err})
+        return res.status(500).json({message: "Usuwanie tagu nie powiodło się", err});
     }
 };
 
