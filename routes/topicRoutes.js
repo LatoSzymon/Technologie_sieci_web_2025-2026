@@ -1,9 +1,12 @@
 const router = require("express").Router();
 const passport = require("../passport");
-const {createTopic, listRootTopics, getTopicById} = require("../controllers/topicControl");
+const { isApproved } = require("../middleware/authMiddleware");
+const { createTopic, listRootTopics, getTopicById } = require("../controllers/topicController");
 
-router.get("/", passport.authenticate('jwt', {session: false}), listRootTopics);
-router.get("/:id", passport.authenticate('jwt', {session: false}), getTopicById);
-router.post("/", passport.authenticate('jwt', {session: false}), createTopic);
+router.use(passport.authenticate('jwt', {session: false}), isApproved);
+
+router.get("/", listRootTopics);
+router.get("/:id", getTopicById);
+router.post("/", createTopic);
 
 module.exports = router;

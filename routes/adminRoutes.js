@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {isAdmin} = require("../middleware/authMiddleware");
-const {listRegisteredButNotAcceptedUsers, approveUser, blockUser, unblockUser} = require("../controllers/adminContol");
+const {listRegisteredButNotAcceptedUsers, approveUser, blockUser, unblockUser} = require("../controllers/adminController");
 const passport = require('../passport');
 
 router.use(passport.authenticate('jwt', { session: false }), isAdmin);
