@@ -1,6 +1,53 @@
 const Topic = require('../models/Topic');
 const User = require('../models/User');
 
+const getAllSubtopics = async (topicId) => {
+    const topic = await Topic.findById(topicId);
+    if (!topic || !topic.children.length) return [];
+    let subtopics = [...topic.children];
+    for (const childId of topic.children) {
+        const childSubtopics = await getAllSubtopics(childId);
+        subtopics = [...subtopics, ...childSubtopics];
+    }
+    return subtopics;
+};
+
+const blockUserInTopic = async (req, res) => {
+    try {
+        const { topicId, userId } = req.body;
+        const currentUserId = req.user.userId;
+        if (!topicId || !userId) {
+            return res.status(400).json({ message: 'topicId i userId są wymagane' });
+        }
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: 'Temat nie istnieje' });
+        }
+
+        const isModerator = topic.ownerId.equals(currentUserId) || topic.moderatorsId.some(id => id.equals(currentUserId) || req.user.role === "admin");
+        if (!isModerator) {
+            return res.status(403).json({ message: 'Tylko moderator lub admin może blokować użytkowników w tym temacie' });
+        }
+
+        if (!topic.bannedUsersIds.some(id => id.equals(userId))) {
+            topic.bannedUsersIds.push(userId);
+            await topic.save();
+        }
+
+        const subtopics = await getAllSubtopics(topicId);
+
+        if (subtopics.length > 0) {
+            await Topic.updateMany(
+                { _id: { $in: subtopics }, bannedUsersIds: { $ne: userId } },
+                { $push: { bannedUsersIds: userId } }
+            );
+        }
+        return res.status(200).json({ message: 'Użytkownik zablokowany w temacie i podtematach' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Błąd blokowania użytkownika', error: error.message });
+    }
+};
+
 const createTopic = async (req, res) => {
     try {
         const {name, description, tags, parentId} = req.body;
@@ -78,4 +125,40 @@ const getTopicById = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getTopicById };
+const unblockUserInTopic = async (req, res) => {
+    try {
+        const { topicId, userId } = req.body;
+        const currentUserId = req.user.userId;
+        if (!topicId || !userId) {
+            return res.status(400).json({ message: 'topicId i userId są wymagane' });
+        }
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: 'Temat nie istnieje' });
+        }
+
+        const isModerator = topic.ownerId.equals(currentUserId) || topic.moderatorsId.some(id => id.equals(currentUserId)) || req.user.role === "admin";
+        if (!isModerator) {
+            return res.status(403).json({ message: 'Tylko moderator lub admin może odblokować użytkownika w tym temacie' });
+        }
+
+        if (topic.bannedUsersIds.some(id => id.equals(userId))) {
+            topic.bannedUsersIds = topic.bannedUsersIds.filter(id => !id.equals(userId));
+            await topic.save();
+        }
+
+        const subtopics = await getAllSubtopics(topicId);
+
+        if (subtopics.length > 0) {
+            await Topic.updateMany(
+                { _id: { $in: subtopics } },
+                { $pull: { bannedUsersIds: userId } }
+            );
+        }
+        return res.status(200).json({ message: 'Użytkownik odblokowany w temacie i podtematach' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Błąd odblokowywania użytkownika', error: error.message });
+    }
+};
+
+module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic };
