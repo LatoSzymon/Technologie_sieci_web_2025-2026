@@ -33,4 +33,6 @@ const updateTag = async (req, res) => {
     } catch (err) {
         return res.status(500).json({message: "Aktualizacja tagu się nie powiodła", updated});
     }
-}
+};
+
+module.exports = {addTag, deleteTag, updateTag};
