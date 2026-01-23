@@ -22,7 +22,7 @@ const plantAnAdmin = async () => {
         const hash = await bcrypt.hash('adminnimda', 12);
         const admin = new User({
             mail: "admin@first.pl",
-            login: 'admin',
+            login: 'adminek',
             hash,
             role: 'admin',
             isApprovedByAdmin: true,

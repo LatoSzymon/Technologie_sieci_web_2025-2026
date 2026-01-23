@@ -6,7 +6,7 @@ const { post } = require("../routes/userRoutes");
 
 const createPost = async (req, res) => {
     try {
-        const {topicId, content, code, tags} = req.body;
+        const {topicId, content, tags} = req.body;
         const authorId = req.user.userId;
 
         if (!topicId || !content) {
@@ -55,7 +55,7 @@ const getPostsForTopic = async (req, res) => {
 
         const total = await Post.countDocuments({topicId, isDeleted: false});
 
-        return res.status(200).json({message: `Lista postów dla tematu ${topicId}`, post, page, total, pages: Math.ceil(total/limit)});
+        return res.status(200).json({message: `Lista postów dla tematu ${topicId}`, posts, page, total, pages: Math.ceil(total/limit)});
 
 
     } catch (err) {

@@ -1,13 +1,14 @@
-const {Tag} = require("../models/Tag");
-const {Post} = require("../models/Post");
-const {Topic} = require("../models/Topic");
+const Tag = require("../models/Tag");
+const Post = require("../models/Post");
+const Topic = require("../models/Topic");
 
 
 const getAllTags = async (req, res) => {
     try {
-        const allTags = await Tag.find({});
+        const allTags = await Tag.find();
         return res.status(200).json(allTags);
     } catch (err) {
+        console.error(err);
         return res.status(500).json({message: "Błąd przy pobieraniu tagow", err});
     }
 };
@@ -42,6 +43,7 @@ const addTag = async (req, res) => {
         await tag.save();
         return res.status(201).json({message: "Tag dodany", tag});
     } catch (err) {
+        console.error(err);
         return res.status(500).json({message: "Błąd przy dodawaniu tagu", err});
     }
 };

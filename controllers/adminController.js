@@ -13,7 +13,7 @@ const approveUser = async (req, res) => {
     try {
         const id = req.params.id;
         const user = await User.findByIdAndUpdate(
-            {id},
+            id,
             {isApprovedByAdmin: true},
             {new: true, select: '-hash'}
         );

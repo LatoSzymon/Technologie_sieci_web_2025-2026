@@ -51,8 +51,8 @@ const login = async (req, res) => {
 
         const user = await User.findOne({
             $or: [
-            { mail: loginOrEmail },
-            { login: loginOrEmail }
+                { mail: loginOrEmail },
+                { login: loginOrEmail }
             ]
         });
 
@@ -61,8 +61,9 @@ const login = async (req, res) => {
         }
 
         const passwordOk = await bcrypt.compare(password, user.hash);
+
         if (!passwordOk) {
-            return res.status(401).json({ message: "Nieprawidłowe dane logowania" });
+            return res.status(401).json({ message: "Nieprawidłowe dane logowania, hasło nieok" });
         }
 
         if (!user.isApprovedByAdmin) {
