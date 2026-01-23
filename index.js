@@ -11,7 +11,7 @@ const https = require('https');
 const http = require('http');
 const path = require('path');
 const passport = require('./passport');
-const {Server} = require("socket.io");
+const {initSocket} = require("./middleware/socket");
 
 const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -65,25 +65,7 @@ mongoose
         };
 
         const httpsServ = https.createServer(tlsOptions, app);
-        const io = new Server(httpsServ, {
-            cors: {
-                origin: "*",     //placeholder
-                methods: ["GET", "POST"],
-                credentials: true
-            }
-        });
-
-        io.on("connection", (sock) => {
-            console.log("Nowe połączenie websocket");
-            sock.on("elo", () => {
-                sock.emit("żelo");
-            });
-
-            sock.on("disconnect", () => {
-                console.log("Socket rozłączony", sock.id);
-
-            });
-        });
+        const io = initSocket(httpsServ);
 
         httpsServ.listen(https_port, () => {
             console.log(`API (https): https://localhost:${https_port}`);
