@@ -66,10 +66,6 @@ const login = async (req, res) => {
             return res.status(401).json({ message: "Nieprawidłowe dane logowania, hasło nieok" });
         }
 
-        if (!user.isApprovedByAdmin) {
-            return res.status(403).json({ message: "Konto nie zostało jeszcze zaakceptowane przez administratora" });
-        }
-
         if (user.isBlocked) {
             return res.status(403).json({ message: "Konto zostało zablokowane przez administratora" });
         }

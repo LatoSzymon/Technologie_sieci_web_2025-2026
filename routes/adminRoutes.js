@@ -1,9 +1,9 @@
 const router = require('express').Router();
-const {isAdmin} = require("../middleware/authMiddleware");
+const {isAdmin, isApproved} = require("../middleware/authMiddleware");
 const {listRegisteredButNotAcceptedUsers, approveUser, blockUser, unblockUser} = require("../controllers/adminController");
 const passport = require('../passport');
 
-router.use(passport.authenticate('jwt', { session: false }), isAdmin);
+router.use(passport.authenticate('jwt', { session: false }), isApproved, isAdmin);
 
 router.get('/unapproved-users', listRegisteredButNotAcceptedUsers);
 router.post('/users/:id/approve', approveUser);
