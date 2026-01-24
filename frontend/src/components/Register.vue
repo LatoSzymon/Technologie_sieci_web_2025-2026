@@ -11,13 +11,13 @@
     const loading = ref(false);
     const router = useRouter();
 
-    const submit = () => {
+    const submit = async () => {
         error.value = '';
         success.value = '';
         loading.value = true;
 
         try {
-            const data = {email: email.value, login: login.value, password: password.value, confirmPassword: confirmPassword.value};
+            const data = {mail: email.value, login: login.value, password: password.value, confirmPassword: confirmPassword.value};
             if (data.password !== data.confirmPassword) {
                 error.value = "Hasła muszą się zgadzać"
             } else {

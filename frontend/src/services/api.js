@@ -1,11 +1,8 @@
-import { config } from "dotenv";
 import axios from "axios";
 
-config();
-
 const urlData = {
-    port: process.env.HTTPS_PORT || 3443,
-    host: process.env.API_HOST || 'localhost'
+    port: import.meta.env.VITE_API_PORT || 3443,
+    host: import.meta.env.VITE_API_HOST || 'localhost'
 }
 
 const api = axios.create({

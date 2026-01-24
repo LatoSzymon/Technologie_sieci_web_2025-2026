@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import {authStore} from '../auth';
 import * as authService from '../services/authService';
 
-const email = ref('');
+const loginOrEmail = ref('');
 const password = ref('');
 const error = ref('');
 const loading = ref(false);
@@ -16,7 +16,7 @@ const submit = async () => {
     loading.value = true;
 
     try {
-        const data = { email: email.value, password: password.value };
+        const data = { loginOrEmail: loginOrEmail.value, password: password.value };
         const res = await authService.login(data);
         auth.accessToken = res.accessToken
 
@@ -38,7 +38,7 @@ const submit = async () => {
     <form @submit.prevent="submit">
         <h2>Logowanie</h2>
         <div v-if="error">{{ error }}</div>
-        <input v-model="email" type="email" placeholder="Email" required />
+        <input v-model="loginOrEmail" type="text" placeholder="Login albo email" required />
         <input v-model="password" type="password" placeholder="Hasło" required />
         <button :disabled="loading">Zaloguj</button>
   </form>
