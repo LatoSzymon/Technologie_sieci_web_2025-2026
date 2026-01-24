@@ -24,4 +24,6 @@ const authStore = defineStore('auth', () => {
     }
 
     return {user, accessToken, isLoggedIn, isApproved, isAdmin, fetchUser, logout};
-})
+});
+
+export {authStore};
