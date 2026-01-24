@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { authStore } from './auth';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const auth = authStore();
 const router = useRouter();
@@ -11,6 +11,10 @@ const handleLogout = () => {
   router.push('/login');
 }
 
+onMounted(() => {
+  auth.fetchUser();
+})
+
 </script>
 
 <template>
@@ -19,10 +23,11 @@ const handleLogout = () => {
       <h1>ProgTalk</h1>
       <span>Bo Reddit jest nudny</span>
     </header>
-    <router-link to="/">Tematy</router-link>|
-    <router-link to="/login">Logowanie</router-link>|
-    <router-link to="/register">Rejestracja</router-link>|
+    <router-link to="/">Tematy</router-link>
+    <router-link to="/login">Logowanie</router-link>
+    <router-link to="/register">Rejestracja</router-link>
     <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
+    <span v-if="auth.isLoggedIn.valueOf === true">SIEEEEEMA</span>
   </nav>
   <main>
     <router-view />
@@ -47,7 +52,7 @@ const handleLogout = () => {
   nav a {
     margin-right: 1em;
     text-decoration: none;
-    color: #333;
+    color: #dfecd0;
   }
   footer {
     margin-top: 2em;

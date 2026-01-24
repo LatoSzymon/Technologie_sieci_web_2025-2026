@@ -17,14 +17,14 @@ const submit = async () => {
 
     try {
         const data = { loginOrEmail: loginOrEmail.value, password: password.value };
-        const res = await authService.login(data);
-        auth.accessToken = res.accessToken
-
+        await authService.login(data);
+        console.log("fetchuję usera po zalogowaniu");
         await auth.fetchUser();
+        console.log(await auth.fetchUser());
         if (!auth.isApproved) {
             router.push('/pending');
         } else {
-            router.push('/app')
+            router.push('/app');
         }
     } catch (err) {
         error.value = err.response?.data?.message || "Błąd logowania"

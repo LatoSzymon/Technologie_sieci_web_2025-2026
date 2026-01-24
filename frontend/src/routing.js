@@ -7,7 +7,9 @@ import App from "./App.vue";
 import { authStore } from "./auth";
 
 const routes = [
-  { path: '/pending', component: PendingApproval, meta: {requiresAuth: true, requiresApproval: false}},
+  { path: '/pending', component: PendingApproval,
+    //  meta: {requiresAuth: true, requiresApproval: false}
+    },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   {path: '/app', component: App,
@@ -42,6 +44,8 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return next('/app');
   }
+
+  next();
 })
 
 export default router;

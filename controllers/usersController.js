@@ -78,7 +78,7 @@ const login = async (req, res) => {
 
         res.cookie("jwt", token, {
             httpOnly: true,
-            secure: true,
+            secure: false,
             sameSite: "strict",
             maxAge: 100 * 60 * 1000,
         });
@@ -106,7 +106,7 @@ const getMe = async (req, res) => {
 const logout = (req, res) => {
     res.clearCookie("jwt", {
         httpOnly: true,
-        secure: true,
+        secure: false,
         sameSite: 'strict'
     });
 
