@@ -1,4 +1,16 @@
 <script setup>
+import { useRouter } from 'vue-router';
+import { authStore } from './auth';
+import { computed } from 'vue';
+
+const auth = authStore();
+const router = useRouter();
+
+const handleLogout = () => {
+  auth.logout();
+  router.push('/login');
+}
+
 </script>
 
 <template>
@@ -7,10 +19,10 @@
       <h1>ProgTalk</h1>
       <span>Bo Reddit jest nudny</span>
     </header>
-    <router-link to="/">Tematy</router-link> |
-    <router-link to="/chat">Czat</router-link> |
-    <router-link to="/login">Logowanie</router-link> |
-    <router-link to="/register">Rejestracja</router-link>
+    <router-link to="/">Tematy</router-link>|
+    <router-link to="/login">Logowanie</router-link>|
+    <router-link to="/register">Rejestracja</router-link>|
+    <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
   </nav>
   <main>
     <router-view />

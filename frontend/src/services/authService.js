@@ -15,4 +15,8 @@ const getMe = async () => {
     return res.data.user;
 }
 
-export {getMe, register, login};
+const logoutMe = async () => {
+    return await api.post('/auth/logout');
+}
+
+export {getMe, register, login, logoutMe};
