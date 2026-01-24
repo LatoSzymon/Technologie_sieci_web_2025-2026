@@ -1,6 +1,7 @@
 require("dotenv").config();
 const {Server} = require("socket.io");
 const jwt = require("jsonwebtoken");
+const Post = require("../models/Post");
 
 
 const initSocket = (server) => {
@@ -51,6 +52,66 @@ const initSocket = (server) => {
         socket.on("disconnect", () => {
             if (socket.userId) userSockets.delete(socket.userId);
             console.log("Socket sie rozłączył", socket.id);
+        });
+
+        socket.on("post:like", async ({postId}) => {
+            if (!socket.userId) {
+                return;
+            }
+
+            try {
+                const post = await Post.findById(postId);
+                if (!post) {
+                    return
+                }
+
+                let liked;
+                if (userIndex === -1) {
+                    post.likes.push(socket.userId);
+                    post.dislikes = post.dislikes.filter(id => id.toString() !== socket.userId);
+                } else {
+                    post.likes.splice(likeIndex, 1);
+                }
+
+                await post.save();
+
+                io.emit("post:like:update", {
+                    postId, likesCount: post.likes.length, dislikesCount: post.dislikes.length,
+                    likes: post.likes, dislikes: post.dislikes
+                });
+            } catch (err) {
+                console.error("Błąd w sockecie przy like'owaniu posta");
+            }
+        });
+
+        socket.on("post:dislike", async ({postId}) => {
+            if (!socket.userId) return;
+            try {
+                const post = await Post.findById(postId);
+                if (!post) {
+                    return;
+                };
+                const dislikeIndex = post.dislikes.indexOf(socket.userId);
+                if (dislikeIndex === -1) {
+                    post.dislikes.push(socket.userId);
+                    post.likes = post.likes.filter(
+                        id => id.toString() !== socket.userId
+                    );
+                } else {
+                    post.dislikes.splice(dislikeIndex, 1); // cofnij dislike
+                }
+                await post.save();
+
+                io.emit("post:like:update", {
+                    postId,
+                    likesCount: post.likes.length,
+                    dislikesCount: post.dislikes.length,
+                    likes: post.likes,
+                    dislikes: post.dislikes
+                });
+            } catch (err) {
+                console.error("Błąd przy dislike'owaniu posta:", err);
+            }
         });
 
         return io; 
