@@ -12,3 +12,10 @@ const routes = [
   { path: '/topics/:id', component: TopicView },
   { path: '/chat', component: Chat }
 ];
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes
+});
+
+export default router
