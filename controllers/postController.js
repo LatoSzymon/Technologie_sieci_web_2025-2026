@@ -128,4 +128,4 @@ const deletePost = async (req, res) => {
     }
 }
 
-module.exports = {createPost, getPostsForTopic, toggleDislike, toggleLike, deletePost};
+module.exports = {createPost, toggleDislike, toggleLike, deletePost};
