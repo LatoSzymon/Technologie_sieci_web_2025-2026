@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { io } from 'socket.io-client';
+import { useTopicsStore } from '../topics';
+import { authStore } from '../auth';
 
 export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);
@@ -35,6 +37,22 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('connect_error', (error) => {
             console.error('Socket connection error:', error);
+        });
+
+        socket.value.on('topic:update', () => {
+            console.log('[WebSocket] topic:update received');
+            const topicsStore = useTopicsStore();
+            topicsStore.fetchTree();
+        });
+
+        socket.value.on('user:blocked', (data) => {
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                alert('Zostałeś zablokowany przez moderatora. Zostaniesz wylogowany.');
+                auth.logout();
+                window.location.href = '/login';
+            }
         });
     };
 
