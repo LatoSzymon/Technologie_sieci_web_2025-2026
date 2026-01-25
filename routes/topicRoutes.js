@@ -5,11 +5,11 @@ const { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUser
 
 router.use(passport.authenticate('jwt', { session: false }), isApproved);
 
+router.get("/tree", getTopicTree);
+router.get("/tree/:id", getTopicSubtree);
 router.get("/", listRootTopics);
 router.get("/:id", getTopicById);
 router.post("/", createTopic);
 router.post("/block-user", blockUserInTopic);
 router.post("/unblock-user", unblockUserInTopic);
-router.get("/tree", getTopicTree);
-router.get("/tree/:id", getTopicSubtree);
 module.exports = router;

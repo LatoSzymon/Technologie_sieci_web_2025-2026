@@ -162,18 +162,22 @@ const unblockUserInTopic = async (req, res) => {
 };
 
 const buildTree = async (parentId = null) => {
-    const topics = await Topic.find({parent: parentId, isHidden: false}).select('-bannedUsersIds');
-    const tree = [];
+    try {
+        const topics = await Topic.find({parent: parentId, isHidden: false}).select('-bannedUsersIds');
+        const tree = [];
 
-    for (const topic of topics) {
-        const children = await buildTree(topic._id);
+        for (const topic of topics) {
+            const children = await buildTree(topic._id);
 
-        tree.push({
-            id: topic._id, name: topic.name, path: topic.path, children, isHidden: topic.isHidden, isClosed: topic.isClosed
-        });
+            tree.push({
+                id: topic._id, name: topic.name, path: topic.path, children, isHidden: topic.isHidden, isClosed: topic.isClosed
+            });
+        }
+
+        return tree;
+    } catch (err) {
+        console.error(err);
     }
-
-    return tree;
 };
 
 const getTopicTree = async (req, res) => {

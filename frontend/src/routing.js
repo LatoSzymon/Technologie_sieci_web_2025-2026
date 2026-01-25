@@ -3,8 +3,9 @@ import Login from './components/Login.vue';
 import Register from './components/Register.vue';
 import PendingApproval from "./components/PendingApproval.vue";
 import AdminDashboard from "./components/AdminDashboard.vue";
-import App from "./App.vue";
 import { authStore } from "./auth";
+import Home from "./components/Home.vue";
+import Topics from "./components/Topics.vue";
 
 const routes = [
   { path: '/pending', component: PendingApproval,
@@ -12,7 +13,11 @@ const routes = [
     },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
-  {path: '/app', component: App,
+  {path: '/topics', component: Topics, meta: {
+    requiresAuth: true, requiresApproval: true
+  }},
+
+  {path: '/home', component: Home,
     meta: {requiresAuth: true, requiresApproval: true},
     children: [
       {

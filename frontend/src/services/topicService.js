@@ -8,6 +8,7 @@ const getTopicTree = async () => {
 
 const getTopicById = async (id) => {
     const res = await api.get(`/topics/${id}`);
+    return res.data;
 };
 
 const getTopicSubtree = async (id) => {

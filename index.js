@@ -22,7 +22,7 @@ const tagRoutes = require("./routes/tagRoutes");
 const app = express();
 app.use(morgan("dev"));
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true
 }));
 app.use(express.json());
