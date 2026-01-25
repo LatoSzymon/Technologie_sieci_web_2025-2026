@@ -2,6 +2,8 @@
 import { postStore } from '../posts';
 import { fetchPosts } from '../services/postService';
 import { onMounted, watch } from 'vue';
+import PostItem from './PostItem.vue';
+import Pagination from './Pagination.vue';
 
 
 const props = defineProps({topicId: Number});
@@ -22,5 +24,8 @@ const changePage = (newPage) => {
 </script>
 
 <template>
-    
+    <div>
+        <PostItem v-for="post in posts" :key="post.id" :post="post"/>
+        <Pagination :page="page" :totalPages="totalPages" @change="changePage" />
+    </div>
 </template>

@@ -3,6 +3,7 @@ import { onMounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
+import PostList from './PostList.vue';
 
 const route = useRoute();
 const topics = useTopicsStore();
@@ -58,6 +59,11 @@ const isBanned = computed(() => {
 		<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length">
 			<small>Moderatorzy: <span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id">{{ mod.login }}</span></small>
 		</div>
+
+        <div>
+            <h3>Dyskusja</h3>
+            <PostList :topic-id="topics.currentTopic._id"/>
+        </div>
 	</div>
 	<div v-else>
 		<em>Nie znaleziono tematu.</em>
