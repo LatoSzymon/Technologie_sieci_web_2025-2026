@@ -9,7 +9,6 @@ export const usePostStore = defineStore('posts', () => {
     };
 
     const addPost = (post) => {
-        // Dodaj post tylko jeśli nie istnieje już na liście
         const exists = posts.value.some(p => {
             const postId = p._id || p.id;
             const newPostId = post._id || post.id;
@@ -17,7 +16,7 @@ export const usePostStore = defineStore('posts', () => {
         });
         
         if (!exists) {
-            posts.value.unshift(post); // Dodaj na początek
+            posts.value.unshift(post);
         }
     };
 
