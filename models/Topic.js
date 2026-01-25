@@ -11,13 +11,11 @@ const topicSchema = new Schema({
         type: String,
         default: ''
     },
-    ownerId: [
-        {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true
-        }
-    ],
+    ownerId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     moderatorsId: [
         {
             type: Schema.Types.ObjectId,

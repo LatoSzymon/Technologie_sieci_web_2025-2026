@@ -2,12 +2,14 @@
 import { onMounted, computed } from 'vue';
 import { useTopicsStore } from '../topics';
 import TopicNode from './TopicNode.vue';
+import { useRouter } from 'vue-router';
 
 const topics = useTopicsStore();
 const tree = computed(() => topics.tree);
+const router = useRouter();
 
 const onSelect = (topicId) => {
-    topics.fetchTopic(topicId)
+    router.push(`/topics/${topicId}`);
 }
 
 onMounted(() => {

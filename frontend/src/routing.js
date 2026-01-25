@@ -6,17 +6,18 @@ import AdminDashboard from "./components/AdminDashboard.vue";
 import { authStore } from "./auth";
 import Home from "./components/Home.vue";
 import Topics from "./components/Topics.vue";
+import TopicView from "./components/TopicView.vue";
 
 const routes = [
   { path: '/pending', component: PendingApproval,
-    //  meta: {requiresAuth: true, requiresApproval: false}
-    },
+      meta: {requiresAuth: true, requiresApproval: false}
+  },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   {path: '/topics', component: Topics, meta: {
-    requiresAuth: true, requiresApproval: true
+    requiresAuth: true, requiresApproval: true,
   }},
-
+  { path: '/topics/:id', component: TopicView, meta: { requiresAuth: true, requiresApproval: true } },
   {path: '/home', component: Home,
     meta: {requiresAuth: true, requiresApproval: true},
     children: [

@@ -27,4 +27,7 @@ const selectNode = () => {
 
 
 <style scoped>
+    span {
+        cursor: pointer;
+    }
 </style>

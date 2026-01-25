@@ -121,6 +121,7 @@ const getTopicById = async (req, res) => {
 
         return res.status(200).json(topic);
     } catch (error) {
+        console.error(error);
         return res.status(500).json({message: "Błąd przy pobieraniu wybranego tematu", error});
     }
 };
