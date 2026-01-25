@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
 import PostList from './PostList.vue';
+import BlockUserModal from './moderation/BlockUserModal.vue';
+import CreateSubtopicModal from './moderation/CreateSubtopicModal.vue';
 
 const route = useRoute();
 const topics = useTopicsStore();
@@ -30,6 +32,31 @@ const isBanned = computed(() => {
     id => (typeof id === 'object' ? id._id === userId : id === userId)
   );
 });
+
+const canModerate = computed(() => {
+	const topic = topics.currentTopic;
+	const userId = auth.user?._id || auth.user?.id;
+	const role = auth.user?.role;
+	if (!topic || !userId) return false;
+	if (role === 'admin') return true;
+	const ownerId = topic.ownerId?._id || topic.ownerId;
+	const isOwner = ownerId && ownerId === userId;
+	const moderators = (topic.moderatorsId || []).map(m => (typeof m === 'object' ? m._id : m));
+	const isModerator = moderators.includes(userId);
+	return isOwner || isModerator;
+});
+
+const showBlockModal = ref(false);
+const showCreateSubtopic = ref(false);
+
+const handleBlocked = () => {
+	// Refresh topic to reflect banned list change
+	topics.fetchTopic(route.params.id);
+};
+const handleCreated = () => {
+	// Refresh children
+	topics.fetchTopic(route.params.id);
+};
 </script>
 
 <template>
@@ -59,6 +86,25 @@ const isBanned = computed(() => {
 		<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length">
 			<small>Moderatorzy: <span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id">{{ mod.login }}</span></small>
 		</div>
+
+				<div v-if="canModerate" style="margin: 1rem 0; border-top: 1px solid #eee; padding-top: 1rem;">
+						<h3>Moderacja</h3>
+						<button @click="showBlockModal = true">Blokuj/Odblokuj użytkownika</button>
+						<button style="margin-left:0.5rem" @click="showCreateSubtopic = true">Utwórz podtemat</button>
+				</div>
+
+				<BlockUserModal 
+					:open="showBlockModal" 
+					:topic-id="topics.currentTopic._id" 
+					@close="showBlockModal = false" 
+					@blocked="handleBlocked" 
+					@unblocked="handleBlocked" />
+
+				<CreateSubtopicModal 
+					:open="showCreateSubtopic" 
+					:parent-id="topics.currentTopic._id" 
+					@close="showCreateSubtopic = false" 
+					@created="handleCreated" />
 
         <div>
             <h3>Dyskusja</h3>
