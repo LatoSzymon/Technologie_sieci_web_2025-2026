@@ -161,4 +161,39 @@ const unblockUserInTopic = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic };
+const buildTree = async (parentId = null) => {
+    const topics = await Topic.find({parent: parentId, isHidden: false}).select('-bannedUsersIds');
+    const tree = [];
+
+    for (const topic of topics) {
+        const children = await buildTree(topic._id);
+
+        tree.push({
+            id: topic._id, name: topic.name, path: topic.path, children, isHidden: topic.isHidden, isClosed: topic.isClosed
+        });
+    }
+
+    return tree;
+};
+
+const getTopicTree = async (req, res) => {
+    try {
+        const tree = await buildTree();
+
+        return res.status(200).json({tree});
+    } catch {
+        return res.status(500).json({message: "Błąd przy pobieraniu drzewa tematów"});
+    }
+};
+
+const getTopicSubtree = async (req, res) => {
+    try {
+        const topicId = req.params.id;
+        const subtree = await buildTree(topicId);
+        return res.status(200).json({tree: subtree});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd przy pobieraniu poddrzewa"});
+    }
+}
+
+module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree };

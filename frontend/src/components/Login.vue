@@ -20,7 +20,6 @@ const submit = async () => {
         await authService.login(data);
         console.log("fetchuję usera po zalogowaniu");
         await auth.fetchUser();
-        console.log(await auth.fetchUser());
         if (!auth.isApproved) {
             router.push('/pending');
         } else {
