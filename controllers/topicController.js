@@ -196,4 +196,4 @@ const getTopicSubtree = async (req, res) => {
     }
 }
 
-module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree };
+module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree };
