@@ -32,6 +32,31 @@ const createPost = async (req, res) => {
         });
 
         await post.save();
+        
+        // Populate author data for socket emission
+        await post.populate('authorId', 'login email');
+        
+        // Emituj event websocket po utworzeniu posta
+        try {
+            const io = req.app.get('io');
+            if (io) {
+                console.log(`📡 [PostController] Emitting post:new to topic:${topicId}`);
+                console.log(`📄 [PostController] Post data:`, {
+                    id: post._id,
+                    topicId: post.topicId,
+                    content: post.content.substring(0, 50) + '...',
+                    author: post.authorId?.login
+                });
+                
+                // Emituj tylko do użytkowników oglądających ten temat
+                io.to(`topic:${topicId}`).emit("post:new", post);
+                console.log(`✅ [PostController] Event emitted successfully`);
+            } else {
+                console.error('❌ [PostController] io is not available on app');
+            }
+        } catch (e) {
+            console.error("❌ [PostController] Nie udało się wysłać post:new przez websocket", e);
+        }
         return res.status(201).json({message: "Utworzono post", post});
 
         

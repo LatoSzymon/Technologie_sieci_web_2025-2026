@@ -1,71 +1,102 @@
 
 <script setup>
-import { postStore } from '../posts';
+import { usePostStore } from '../posts';
+import { useSocketStore } from '../stores/socket';
 import { fetchPosts } from '../services/postService';
 import api from '../services/api';
-import { ref, onMounted, watch } from 'vue';
-import { useSocket } from '../socketFront';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import PostItem from './PostItem.vue';
-import Pagination from './Pagination.vue';
 
-const props = defineProps({ topicId: Number });
+const props = defineProps({ 
+    topicId: String 
+});
+
+const postStore = usePostStore();
+const socketStore = useSocketStore();
 
 const newPostContent = ref("");
 const isAdding = ref(false);
 const addError = ref("");
 
-const load = async (pageNumber = 1) => {
-    const data = await fetchPosts(props.topicId, pageNumber);
-    // Mapuj 'pages' z backendu na 'totalPages' dla postStore
-    postStore.setPosts({
-        ...data,
-        totalPages: data.pages,
-        topicId: props.topicId
-    });
+const load = async () => {
+    try {
+        const data = await fetchPosts(props.topicId);
+        postStore.setPosts({ posts: data.posts || [] });
+    } catch (err) {
+        console.error('Error loading posts:', err);
+    }
 }
 
-onMounted(() => load(postStore.lastReadPage[props.topicId] || 1));
-watch(() => props.topicId, () => load(1));
+const handleNewPost = (post) => {
+    console.log('Received new post:', post);
+    const postTopicId = post.topicId?._id || post.topicId;
+    const currentTopicId = props.topicId;
+    
+    console.log(`Comparing topicIds: post=${postTopicId}, current=${currentTopicId}`);
+    
+    if (postTopicId === currentTopicId) {
+        console.log('Topic matches!');
+        postStore.addPost(post);
+        console.log(' Post added to store');
+    } else {
+        console.log(' Topic does not match, ignoring post');
+    }
+};
 
+onMounted(() => {
+    console.log('Component mounted for topic:', props.topicId);
+    load();
 
-const changePage = (newPage) => {
-    // Walidacja zakresu stron
-    if (newPage < 1 || newPage > postStore.totalPages) return;
-    load(newPage);
-}
+    socketStore.on("post:new", handleNewPost);
+    console.log('Listening for post:new events');
 
+    if (socketStore.connected) {
+        console.log('Socket already connected, joining topic immediately');
+        socketStore.joinTopic(props.topicId);
+    }
+});
 
-const { socket } = useSocket();
-if (socket) {
-    socket.on("post:new", (post) => {
-        if (post.topicId === props.topicId) {
-            // Jeśli jesteśmy na ostatniej stronie, dodaj post natychmiast
-            if (postStore.page === postStore.totalPages) {
-                postStore.addPost(post);
-                // Aktualizuj licznik postów i stron jeśli trzeba
-                postStore.posts = postStore.posts.slice(0, 10); // Załóżmy 10 postów na stronę
-                // Jeśli przekroczono limit, zwiększ totalPages
-                if (postStore.posts.length === 10 && postStore.totalPages * 10 <= postStore.posts.length) {
-                    postStore.totalPages += 1;
-                }
-            }
-            // Jeśli nie, możesz dodać notyfikację lub nic nie robić
+onBeforeUnmount(() => {
+    console.log('Component unmounting');
+    socketStore.off("post:new", handleNewPost);
+    socketStore.leaveTopic(props.topicId);
+});
+
+watch(() => socketStore.connected, (isConnected) => {
+    console.log(`Socket connection changed: ${isConnected}`);
+    if (isConnected && props.topicId) {
+        console.log('Socket connected, joining topic:', props.topicId);
+        socketStore.joinTopic(props.topicId);
+    }
+});
+
+watch(() => props.topicId, (newTopicId, oldTopicId) => {
+    console.log(`Topic changed from ${oldTopicId} to ${newTopicId}`);
+    if (oldTopicId) {
+        socketStore.leaveTopic(oldTopicId);
+    }
+    if (newTopicId) {
+        load();
+        if (socketStore.connected) {
+            socketStore.joinTopic(newTopicId);
         }
-    });
-}
+    }
+});
 
 const addPost = async () => {
     if (!newPostContent.value.trim()) return;
     isAdding.value = true;
     addError.value = "";
+    console.log('Sending new post to API...');
     try {
-        await api.post('/posts', {
+        const response = await api.post('/posts', {
             topicId: props.topicId,
             content: newPostContent.value
         });
+        console.log('Post created successfully:', response.data);
         newPostContent.value = "";
-        // Post pojawi się automatycznie przez socket
     } catch (err) {
+        console.error('Error creating post:', err);
         addError.value = err?.response?.data?.message || 'Błąd dodawania posta';
     } finally {
         isAdding.value = false;
@@ -75,7 +106,6 @@ const addPost = async () => {
 
 <template>
     <div>
-        <!-- Formularz dodawania nowego posta -->
         <form @submit.prevent="addPost" style="margin-bottom: 1em;">
             <textarea v-model="newPostContent" rows="3" style="width:100%" placeholder="Napisz nowy post..." :disabled="isAdding"></textarea>
             <div>
@@ -84,7 +114,6 @@ const addPost = async () => {
             </div>
         </form>
 
-        <PostItem v-for="post in postStore.posts" :key="post.id" :post="post"/>
-        <Pagination :page="postStore.page" :totalPages="postStore.totalPages" @change="changePage" />
+        <PostItem v-for="post in postStore.posts" :key="post._id || post.id" :post="post"/>
     </div>
 </template>

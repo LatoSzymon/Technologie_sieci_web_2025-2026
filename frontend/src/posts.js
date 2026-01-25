@@ -1,24 +1,37 @@
-import { reactive } from "vue";
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
 
-const postStore = reactive({
-    posts: [],
-    page: 1,
-    totalPages: 1,
-    lastReadPage: {},
-    setPosts({posts, page, totalPages, topicId}) {
-        this.posts = posts;
-        this.page = page;
-        this.totalPages = totalPages;
-        if (topicId) {
-            this.lastReadPage[topicId] = page;
-        }
-    },
-    addPost(post) {
+export const usePostStore = defineStore('posts', () => {
+    const posts = ref([]);
+
+    const setPosts = ({ posts: newPosts }) => {
+        posts.value = newPosts || [];
+    };
+
+    const addPost = (post) => {
         // Dodaj post tylko jeśli nie istnieje już na liście
-        if (!this.posts.some(p => p.id === post.id)) {
-            this.posts.unshift(post); // Dodaj na początek (jeśli sortujesz od najnowszych)
+        const exists = posts.value.some(p => {
+            const postId = p._id || p.id;
+            const newPostId = post._id || post.id;
+            return postId === newPostId;
+        });
+        
+        if (!exists) {
+            posts.value.unshift(post); // Dodaj na początek
         }
-    }
-});
+    };
 
-export {postStore};
+    const removePost = (postId) => {
+        posts.value = posts.value.filter(p => {
+            const id = p._id || p.id;
+            return id !== postId;
+        });
+    };
+
+    return {
+        posts,
+        setPosts,
+        addPost,
+        removePost
+    };
+});

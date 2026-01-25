@@ -69,6 +69,8 @@ mongoose
 
         const httpsServ = https.createServer(tlsOptions, app);
         const io = initSocket(httpsServ);
+        // Udostępnij io globalnie w aplikacji Express
+        app.set('io', io);
 
         httpsServ.listen(https_port, () => {
             console.log(`API (https): https://localhost:${https_port}`);

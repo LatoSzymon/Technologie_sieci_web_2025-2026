@@ -2,7 +2,6 @@
 <script setup>
 import { onMounted, computed } from 'vue';
 import { useTopicsStore } from '../topics';
-import { useSocket } from '../socketFront';
 import TopicNode from './TopicNode.vue';
 import { useRouter } from 'vue-router';
 
@@ -18,13 +17,12 @@ onMounted(() => {
     topics.fetchTree();
 });
 
-// SOCKET: automatyczne odświeżenie drzewa tematów po aktualizacji przez socket
-const { socket } = useSocket();
-if (socket) {
-    socket.on("topic:update", () => {
-        topics.fetchTree();
-    });
-}
+// const { socket } = useSocket();
+// if (socket) {
+//     socket.on("topic:update", () => {
+//         topics.fetchTree();
+//     });
+// }
 </script>
 
 <template>

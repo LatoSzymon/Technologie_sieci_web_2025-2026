@@ -20,6 +20,7 @@
   "homepage": "https://gitlab.com/ugwp/technologie-sieci-web/25-26/lato-szymon-projekt#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie": "^0.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

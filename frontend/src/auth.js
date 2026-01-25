@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getMe, logoutMe } from './services/authService';
+import { useSocketStore } from './stores/socket';
 
 const authStore = defineStore('auth', () => {
     const user = ref(null);
@@ -14,6 +15,15 @@ const authStore = defineStore('auth', () => {
         try {
             const res = await getMe();
             user.value = res;
+            
+            console.log('👤 [AuthStore] User fetched:', res);
+            
+            // Po zalogowaniu połącz WebSocket
+            if (res) {
+                console.log('🔌 [AuthStore] Connecting WebSocket...');
+                const socketStore = useSocketStore();
+                socketStore.connect();
+            }
         } catch {
             user.value = null;
         } finally {
@@ -22,6 +32,10 @@ const authStore = defineStore('auth', () => {
     };
 
     const logout = async () => {
+        // Rozłącz socket przed wylogowaniem
+        const socketStore = useSocketStore();
+        socketStore.disconnect();
+        
         user.value = null;
         await logoutMe();
     };
