@@ -1,5 +1,6 @@
 const Topic = require('../models/Topic');
 const User = require('../models/User');
+const Post = require("../models/Post");
 
 const getAllSubtopics = async (topicId) => {
     const topic = await Topic.findById(topicId);
@@ -181,6 +182,29 @@ const buildTree = async (parentId = null) => {
     }
 };
 
+const getPostsForTopic = async (req, res) => {
+    try {
+        const {topicId} = req.params;
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const posts = await Post.find({topicId, isDeleted: false})
+            .sort({createdAt: 1})       //surtowanie 1 to rosnąco, jak malejąco to -1
+            .skip((page - 1) * limit)       //pomiń ileśtam rekordów po znalezieniu
+            .limit(limit)               //pokaż tylko tyle ile limiit
+            .populate('authorId', 'login');  //
+
+        const total = await Post.countDocuments({topicId, isDeleted: false});
+
+        return res.status(200).json({message: `Lista postów dla tematu ${topicId}`, posts, page, total, pages: Math.ceil(total/limit)});
+
+
+    } catch (err) {
+        return res.status(500).json({message: "Problem z wylistowaniem postow dla danego tematu", err});
+    }
+};
+
 const getTopicTree = async (req, res) => {
     try {
         const tree = await buildTree();
@@ -201,4 +225,4 @@ const getTopicSubtree = async (req, res) => {
     }
 }
 
-module.exports = { createTopic, listRootTopics, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree };
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree };
