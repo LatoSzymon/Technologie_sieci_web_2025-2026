@@ -23,11 +23,14 @@ onMounted(() => {
       <h1>ProgTalk</h1>
       <span>Bo Reddit jest nudny</span>
     </header>
-    <router-link to="/topics">Tematy</router-link>
+    <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
+    <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
+    <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
+    <router-link to="/chat" v-if="auth.isLoggedIn">Chat</router-link>
+    <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
     <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
     <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
     <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
-    <span v-if="auth.isLoggedIn.valueOf === true">SIEEEEEMA</span>
   </nav>
   <main>
     <router-view />

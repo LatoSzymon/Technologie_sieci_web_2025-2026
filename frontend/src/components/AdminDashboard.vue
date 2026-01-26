@@ -10,7 +10,6 @@ const handleNotify = (e) => {
 
 onMounted(() => {
 	window.addEventListener('admin-notify', handleNotify);
-	// Load any notifications that arrived before mount
 	if (window.__adminNotifications) {
 		notifications.value = [...window.__adminNotifications].reverse();
 	}

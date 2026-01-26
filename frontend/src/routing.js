@@ -7,6 +7,8 @@ import { authStore } from "./auth";
 import Home from "./components/Home.vue";
 import Topics from "./components/Topics.vue";
 import TopicView from "./components/TopicView.vue";
+import Profile from "./components/Profile.vue";
+import Chat from "./components/Chat.vue";
 
 const routes = [
   { path: '/pending', component: PendingApproval,
@@ -14,11 +16,13 @@ const routes = [
   },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
-  {path: '/topics', component: Topics, meta: {
+  { path: '/topics', component: Topics, meta: {
     requiresAuth: true, requiresApproval: true,
   }},
   { path: '/topics/:id', component: TopicView, meta: { requiresAuth: true, requiresApproval: true } },
-  {path: '/home', component: Home,
+  { path: '/profile', component: Profile, meta: { requiresAuth: true, requiresApproval: true } },
+  { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresApproval: true } },
+  { path: '/home', component: Home,
     meta: {requiresAuth: true, requiresApproval: true},
     children: [
       {
@@ -48,7 +52,7 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return next('/app');
+    return next('home');
   }
 
   next();
