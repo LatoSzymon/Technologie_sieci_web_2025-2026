@@ -23,7 +23,7 @@ const submit = async () => {
         if (!auth.isApproved) {
             router.push('/pending');
         } else {
-            router.push('/home');
+            router.push('/topics');
         }
     } catch (err) {
         error.value = err.response?.data?.message || "Błąd logowania"

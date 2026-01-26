@@ -14,9 +14,43 @@ const getAllSubtopics = async (topicId) => {
     return subtopics;
 };
 
+const isUserBlockedInTopic = (topic, userId) => {
+    if (!topic || !userId) return false;
+    
+    const userIdStr = userId.toString ? userId.toString() : String(userId);
+
+    const isBanned = topic.bannedUsersIds.some(id => {
+        const idStr = id.toString ? id.toString() : String(id);
+        return idStr === userIdStr;
+    });
+    
+    if (!isBanned) return false;
+
+    if (topic.blockedUserExceptions && Array.isArray(topic.blockedUserExceptions)) {
+        const exception = topic.blockedUserExceptions.find(exc => {
+            const excUserIdStr = exc.userId.toString ? exc.userId.toString() : String(exc.userId);
+            return excUserIdStr === userIdStr;
+        });
+        
+        if (exception && exception.allowedInTopicIds && Array.isArray(exception.allowedInTopicIds)) {
+            const isInAllowedList = exception.allowedInTopicIds.some(topicId => {
+                const allowedIdStr = topicId.toString ? topicId.toString() : String(topicId);
+                return allowedIdStr === topic._id.toString();
+            });
+            
+            if (isInAllowedList) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+};
+
+
 const blockUserInTopic = async (req, res) => {
     try {
-        const { topicId, userId } = req.body;
+        const { topicId, userId, exceptTopicIds = [] } = req.body;
         const currentUserId = req.user.userId;
         if (!topicId || !userId) {
             return res.status(400).json({ message: 'topicId i userId są wymagane' });
@@ -33,29 +67,47 @@ const blockUserInTopic = async (req, res) => {
 
         if (!topic.bannedUsersIds.some(id => id.equals(userId))) {
             topic.bannedUsersIds.push(userId);
-            await topic.save();
         }
+
+        topic.blockedUserExceptions = (topic.blockedUserExceptions || []).filter(
+            exc => !exc.userId.equals(userId)
+        );
+
+        if (exceptTopicIds && exceptTopicIds.length > 0) {
+            topic.blockedUserExceptions.push({
+                userId: userId,
+                allowedInTopicIds: exceptTopicIds
+            });
+        }
+
+        await topic.save();
 
         const subtopics = await getAllSubtopics(topicId);
 
         if (subtopics.length > 0) {
-            await Topic.updateMany(
-                { _id: { $in: subtopics }, bannedUsersIds: { $ne: userId } },
-                { $push: { bannedUsersIds: userId } }
-            );
+
+            for (const subtopicId of subtopics) {
+                if (!exceptTopicIds.includes(subtopicId.toString())) {
+                    await Topic.updateOne(
+                        { _id: subtopicId, bannedUsersIds: { $ne: userId } },
+                        { $push: { bannedUsersIds: userId } }
+                    );
+                }
+            }
         }
 
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 io.to(`user:${userId}`).emit('user:blocked', { userId, topicId, reason: req.body.reason || '' });
+                io.to(`topic:${topicId}`).emit('topic:userBlocked', { userId, topicId, exceptTopicIds });
                 console.log(`Emitted user:blocked to user:${userId}`);
             }
         } catch (e) {
             console.error('WebSocket error (blockUser):', e);
         }
         
-        return res.status(200).json({ message: 'Użytkownik zablokowany w temacie i podtematach' });
+        return res.status(200).json({ message: 'Użytkownik zablokowany w temacie i podtematach', topic: topic });
     } catch (error) {
         return res.status(500).json({ message: 'Błąd blokowania użytkownika', error: error.message });
     }
@@ -183,8 +235,13 @@ const unblockUserInTopic = async (req, res) => {
 
         if (topic.bannedUsersIds.some(id => id.equals(userId))) {
             topic.bannedUsersIds = topic.bannedUsersIds.filter(id => !id.equals(userId));
-            await topic.save();
         }
+
+        topic.blockedUserExceptions = (topic.blockedUserExceptions || []).filter(
+            exc => !exc.userId.equals(userId)
+        );
+
+        await topic.save();
 
         const subtopics = await getAllSubtopics(topicId);
 
@@ -193,19 +250,25 @@ const unblockUserInTopic = async (req, res) => {
                 { _id: { $in: subtopics } },
                 { $pull: { bannedUsersIds: userId } }
             );
+
+            await Topic.updateMany(
+                { _id: { $in: subtopics } },
+                { $pull: { blockedUserExceptions: { userId: userId } } }
+            );
         }
 
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 io.to(`user:${userId}`).emit('user:unblocked', { userId, topicId });
+                io.to(`topic:${topicId}`).emit('topic:userUnblocked', { userId, topicId });
                 console.log(`Emitted user:unblocked to user:${userId}`);
             }
         } catch (e) {
             console.error('WebSocket error (unblockUser):', e);
         }
         
-        return res.status(200).json({ message: 'Użytkownik odblokowany w temacie i podtematach' });
+        return res.status(200).json({ message: 'Użytkownik odblokowany w temacie i podtematach', topic: topic });
     } catch (error) {
         return res.status(500).json({ message: 'Błąd odblokowywania użytkownika', error: error.message });
     }
@@ -214,7 +277,6 @@ const unblockUserInTopic = async (req, res) => {
 const buildTree = async (parentId = null) => {
     try {
         const topics = await Topic.find({parent: parentId, isHidden: false})
-            .select('-bannedUsersIds')
             .populate('tags', 'name');
         const tree = [];
 
@@ -228,14 +290,17 @@ const buildTree = async (parentId = null) => {
                 children, 
                 isHidden: topic.isHidden, 
                 isClosed: topic.isClosed,
-                tags: topic.tags
+                tags: topic.tags,
+                bannedUsersIds: topic.bannedUsersIds,
+                blockedUserExceptions: topic.blockedUserExceptions
             });
         }
-
         return tree;
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        console.error('buildTree error:', error);
+        return [];
     }
+
 };
 
 const getPostsForTopic = async (req, res) => {

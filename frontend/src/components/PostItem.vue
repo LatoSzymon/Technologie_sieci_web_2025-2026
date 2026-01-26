@@ -5,6 +5,7 @@ import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
 import api from '../services/api';
 import { usePostStore } from '../posts';
+import { blockUser as globalBlockUser } from '../services/adminService';
 
 const props = defineProps({ post: Object });
 const emit = defineEmits(['blocked']);
@@ -18,8 +19,23 @@ const topics = useTopicsStore();
 const auth = authStore();
 const postStore = usePostStore();
 
+const normalizeId = (id) => {
+  if (!id) return null;
+  return typeof id === 'object' ? (id._id || id.id) : id;
+};
+
+const likesCount = computed(() => props.post.likes?.length || 0);
+const currentUserId = computed(() => {
+  const id = auth.user?._id || auth.user?.id;
+  return normalizeId(id);
+});
+
+const hasLiked = computed(() => {
+  if (!props.post.likes || !currentUserId.value) return false;
+  return props.post.likes.some(id => normalizeId(id) === currentUserId.value);
+});
+
 const canModerate = computed(() => {
-  // Zwraca true jeśli user może moderować ten temat
   const topic = topics.currentTopic;
   const userId = auth.user?._id || auth.user?.id;
   const role = auth.user?.role;
@@ -32,18 +48,38 @@ const canModerate = computed(() => {
   return isOwner || isModerator;
 });
 
+const isAdmin = computed(() => {
+  return auth.user?.role === 'admin';
+});
+
 const isBlocking = ref(false);
 const isDeleting = ref(false);
+const isLiking = ref(false);
 const error = ref('');
 
-const blockUser = async () => {
+const blockUserInTopic = async () => {
   isBlocking.value = true;
   error.value = '';
   try {
-    await api.post(`/topics/${topics.currentTopic._id}/block`, { userId: props.post.authorId._id || props.post.authorId });
+    const userId = props.post.authorId._id || props.post.authorId;
+    await api.post(`/topics/block-user`, { topicId: topics.currentTopic._id, userId });
     emit('blocked');
   } catch (e) {
-    error.value = e?.response?.data?.message || 'Błąd blokowania użytkownika';
+    error.value = e?.response?.data?.message || 'Błąd blokowania użytkownika w temacie';
+  } finally {
+    isBlocking.value = false;
+  }
+};
+
+const blockUserGlobally = async () => {
+  isBlocking.value = true;
+  error.value = '';
+  try {
+    const userId = props.post.authorId._id || props.post.authorId;
+    await globalBlockUser(userId);
+    emit('blocked');
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Błąd blokowania użytkownika globalnie';
   } finally {
     isBlocking.value = false;
   }
@@ -60,7 +96,44 @@ const deletePost = async () => {
   } finally {
     isDeleting.value = false;
   }
+
+const deletePost = async () => {
+  isDeleting.value = true;
+  error.value = '';
+  try {
+    await api.delete(`/posts/${postId.value}`);
+    postStore.removePost(postId.value);
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Błąd usuwania posta';
+  } finally {
+    isDeleting.value = false;
+  }
 };
+
+const toggleLike = async () => {
+  isLiking.value = true;
+  error.value = '';
+  try {
+    if (hasLiked.value) {
+      props.post.likes = props.post.likes.filter(id => normalizeId(id) !== currentUserId.value);
+    } else {
+      props.post.likes.push(currentUserId.value);
+    }
+    
+    const response = await api.post(`/posts/${postId.value}/like`);
+    console.log('Like toggled:', response.data);
+
+    if (response.data.likes) {
+      props.post.likes = response.data.likes || [];
+    }
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Błąd like\'owania posta';
+    window.location.reload();
+  } finally {
+    isLiking.value = false;
+  }
+};
+
 </script>
 
 <template>
@@ -70,11 +143,23 @@ const deletePost = async () => {
     <div class="date">{{ new Date(post.createdAt).toLocaleString() }}</div>
     <div class="meta">
       <small>ID: {{ postId }}</small>
-      <template v-if="canModerate">
-        <button @click="deletePost" :disabled="isDeleting" style="margin-left:1em;">Usuń post</button>
-        <button @click="blockUser" :disabled="isBlocking" style="margin-left:0.5em;">Zablokuj użytkownika</button>
-      </template>
-      <span v-if="error" style="color:red; margin-left:1em;">{{ error }}</span>
+      <div style="margin-top: 0.5rem;">
+        <button 
+          @click="toggleLike" 
+          :disabled="isLiking"
+          :style="{ fontWeight: hasLiked ? 'bold' : 'normal' }"
+        >
+          + {{ likesCount }}
+        </button>
+        <template v-if="canModerate || isAdmin">
+          <button @click="deletePost" :disabled="isDeleting" style="margin-left:1em;">Usuń post</button>
+          <button @click="blockUserInTopic" :disabled="isBlocking" style="margin-left:0.5em;" title="Zablokuj w tym temacie">Blokuj w temacie</button>
+        </template>
+        <template v-if="isAdmin">
+          <button @click="blockUserGlobally" :disabled="isBlocking" style="margin-left:0.5em; background: #dc3545;" title="Zablokuj globalnie">🚫 Blokuj globalnie</button>
+        </template>
+      </div>
+      <span v-if="error" style="color:red; margin-top:0.5rem; display:block;">{{ error }}</span>
     </div>
   </div>
 </template>

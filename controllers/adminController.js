@@ -54,6 +54,23 @@ const blockUser = async (req, res) => {
             return res.status(404).json({message: "Użytkownik nie został znaleziony"});
         }
 
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${user._id}`).emit('user:blocked', { userId: user._id, message: 'Zostałeś zablokowany przez administratora' });
+                io.to('admins').emit('admin:notify', {
+                    type: 'user-blocked',
+                    login: user.login,
+                    mail: user.mail,
+                    userId: user._id,
+                    message: `Użytkownik zablokowany: ${user.login} (${user.mail})`
+                });
+                console.log(`Emitted user:blocked to user:${user._id}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (blockUser):', e);
+        }
+
         return res.status(200).json({message: "Zablokowano użytkownika"});
     } catch (error) {
         return res.status(500).json({message: "Błąd przy blokowaniu użytkownika", error});
@@ -68,10 +85,45 @@ const unblockUser = async (req, res) => {
             return res.status(404).json({message: "Użytkownik nie został znaleziony"});
         }
 
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${user._id}`).emit('user:unblocked', { userId: user._id, message: 'Blokada została usunięta' });
+                io.to('admins').emit('admin:notify', {
+                    type: 'user-unblocked',
+                    login: user.login,
+                    mail: user.mail,
+                    userId: user._id,
+                    message: `Użytkownik odblokowany: ${user.login} (${user.mail})`
+                });
+                console.log(`Emitted user:unblocked to user:${user._id}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (unblockUser):', e);
+        }
+
         return res.status(200).json({message: "Odblokowano użytkownika"});
     } catch (error) {
         return res.status(500).json({message: "Błąd przy odblokowywaniu użytkownika", error});
     }
 };
 
-module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser};
+const listBlockedUsers = async (req, res) => {
+    try {
+        const users = await User.find({isBlocked: true}).select('-hash');
+        return res.status(200).json({users});
+    } catch (er) {
+        return res.status(500).json({message: "Błąd przy wylistowywaniu zablokowanych użytkowników", er});
+    }
+};
+
+const listAllNonAdminUsers = async (req, res) => {
+    try {
+        const users = await User.find({role: {$ne: 'admin'}}).select('-hash').sort({login: 1});
+        return res.status(200).json({users});
+    } catch (er) {
+        return res.status(500).json({message: "Błąd przy wylistowywaniu użytkowników", er});
+    }
+};
+
+module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser, listBlockedUsers, listAllNonAdminUsers};

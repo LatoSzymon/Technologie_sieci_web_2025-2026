@@ -23,7 +23,10 @@ const filteredTree = computed(() => {
     function filterNodes(nodes) {
         return (nodes || []).filter(node => {
             const matchesSearch = !search.value || node.name.toLowerCase().includes(search.value.toLowerCase());
-            const matchesTag = !tagFilter.value || (node.tags || []).includes(tagFilter.value);
+            const matchesTag = !tagFilter.value || (node.tags || []).some(tag => {
+                const tagId = typeof tag === 'object' ? tag._id : tag;
+                return tagId === tagFilter.value;
+            });
             const filteredChildren = filterNodes(node.children || []);
             return (matchesSearch && matchesTag) || filteredChildren.length > 0;
         }).map(node => ({
@@ -52,12 +55,6 @@ onMounted(async () => {
         }
 });
 
-// const { socket } = useSocket();
-// if (socket) {
-//     socket.on("topic:update", () => {
-//         topics.fetchTree();
-//     });
-// }
 </script>
 
 <template>
@@ -66,7 +63,7 @@ onMounted(async () => {
             <input v-model="search" placeholder="Szukaj tematu..." style="margin-right:1em;" />
             <select v-model="tagFilter">
                 <option value="">Wszystkie tagi</option>
-                <option v-for="tag in allTags" :key="tag._id || tag.name || tag" :value="tag.name || tag">{{ tag.name || tag }}</option>
+                <option v-for="tag in allTags" :key="tag._id" :value="tag._id">{{ tag.name }}</option>
             </select>
         </div>
         <button @click="showCreateModal = true">Utwórz nowy temat</button>
