@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import {getTopicById, getTopicSubtree, getTopicTree} from "./services/topicService";
+import {getTopicById, getTopicSubtree, getTopicTree, createTopic} from "./services/topicService";
 
 const useTopicsStore = defineStore("topics", () => {
     const tree = ref([]);
@@ -55,7 +55,22 @@ const useTopicsStore = defineStore("topics", () => {
         }
     };
 
-    return {tree, currentTopic, permissions, loading, error, fetchTree, fetchSubtree, fetchTopic};
+    const createTopicAction = async (topicData) => {
+        try {
+            loading.value = true;
+            error.value = null;
+            await createTopic(topicData);
+            await fetchTree();
+        } catch (err) {
+            error.value = err.message;
+            console.error('Error creating topic:', err);
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    return {tree, currentTopic, permissions, loading, error, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction};
 });
 
 export {useTopicsStore};

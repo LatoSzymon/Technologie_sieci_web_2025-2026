@@ -16,6 +16,7 @@ const routes = [
   },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
+  { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, requiresApproval: true, requiresAdmin: true } },
   { path: '/topics', component: Topics, meta: {
     requiresAuth: true, requiresApproval: true,
   }},
@@ -23,14 +24,7 @@ const routes = [
   { path: '/profile', component: Profile, meta: { requiresAuth: true, requiresApproval: true } },
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresApproval: true } },
   { path: '/home', component: Home,
-    meta: {requiresAuth: true, requiresApproval: true},
-    children: [
-      {
-        path: '/admin',
-        component: AdminDashboard,
-        meta: {requiresAdmin: true}
-      }
-    ]
+    meta: {requiresAuth: true, requiresApproval: true}
   }
 ];
 
@@ -52,7 +46,7 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return next('home');
+    return next('/home');
   }
 
   next();

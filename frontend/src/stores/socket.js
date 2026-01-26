@@ -3,11 +3,13 @@ import { ref } from 'vue';
 import { io } from 'socket.io-client';
 import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
+import { usePostStore } from '../posts';
 
 export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);
     const connected = ref(false);
     const currentTopicId = ref(null);
+    const eventListeners = ref({});
 
     const connect = () => {
         if (socket.value?.connected) {
@@ -38,8 +40,8 @@ export const useSocketStore = defineStore('socket', () => {
             console.error('Socket connection error:', error);
         });
 
-        socket.value.on('topic:update', () => {
-            console.log('[WebSocket] topic:update received');
+        socket.value.on('topic:updated', () => {
+            console.log('[WebSocket] topic:updated received');
             const topicsStore = useTopicsStore();
             topicsStore.fetchTree();
         });
@@ -48,12 +50,50 @@ export const useSocketStore = defineStore('socket', () => {
             const auth = authStore();
             const userId = auth.user?._id || auth.user?.id;
             if (data?.userId && data.userId === userId) {
-                alert('Zostałeś zablokowany przez moderatora. Zostaniesz wylogowany.');
-                auth.logout();
-                window.location.href = '/login';
+                console.log('[WebSocket] user:blocked received - user is blocked');
+                auth.blocked = true;
+                window.dispatchEvent(new CustomEvent('user-blocked', { detail: data }));
             }
         });
-        
+
+        socket.value.on('user:unblocked', (data) => {
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                console.log('[WebSocket] user:unblocked received');
+                auth.blocked = false;
+                window.dispatchEvent(new CustomEvent('user-unblocked', { detail: data }));
+            }
+        });
+
+        socket.value.on('user:approved', (data) => {
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                console.log('[WebSocket] user:approved received');
+                auth.user.isApprovedByAdmin = true;
+                window.dispatchEvent(new CustomEvent('user-approved', { detail: data }));
+            }
+        });
+
+        socket.value.on('post:new', (post) => {
+            console.log('[WebSocket] post:new received', post);
+            const postStore = usePostStore();
+            postStore.addPost(post);
+        });
+
+        socket.value.on('post:deleted', (data) => {
+            console.log('[WebSocket] post:deleted received', data);
+            const postStore = usePostStore();
+            postStore.removePost(data.postId);
+        });
+
+        socket.value.on('post:liked', (data) => {
+            console.log('[WebSocket] post:liked received', data);
+            const postStore = usePostStore();
+            postStore.updatePostLikes(data.postId, data.likesCount, data.liked, data.likes);
+        });
+
         socket.value.on('admin:notify', (data) => {
             if (!window.__adminNotifications) window.__adminNotifications = [];
             window.__adminNotifications.push({ ...data, ts: new Date() });
