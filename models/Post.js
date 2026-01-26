@@ -19,10 +19,6 @@ const postSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
-    dislikes: [{
-        type: Schema.Types.ObjectId,
-        ref: "User"
-    }],
     isDeleted: {
         type: Boolean,
         default: false

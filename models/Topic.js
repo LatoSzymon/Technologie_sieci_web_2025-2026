@@ -26,6 +26,16 @@ const topicSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
+    blockedUserExceptions: [{
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: "User"
+        },
+        allowedInTopicIds: [{
+            type: Schema.Types.ObjectId,
+            ref: "Topic"
+        }]
+    }],
     parent: {
         type: Schema.Types.ObjectId,
         ref: "Topic"

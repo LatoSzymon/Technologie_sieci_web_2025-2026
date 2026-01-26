@@ -22,6 +22,15 @@ const userSchema = new Schema({
     isApprovedByAdmin: {
         type: Boolean,
         default: false
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false,
+    },
+    lastReadPage: {
+        type: Map,
+        of: Number,
+        default: new Map(),
     }
 }, {timestamps: true});
 
