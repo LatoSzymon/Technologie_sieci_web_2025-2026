@@ -6,6 +6,10 @@ const emit = defineEmits(["select"]);
 const selectNode = () => {
   emit("select", props.node.id);
 };
+
+const getTagName = (tag) => {
+  return typeof tag === 'string' ? tag : tag.name;
+};
 </script>
 
 <template>
@@ -14,7 +18,9 @@ const selectNode = () => {
       {{ node.name }}
       <span v-if="node.isClosed" class="closed">(zamknięty)</span>
       <span v-if="node.tags && node.tags.length" class="tags">
-        <span v-for="tag in node.tags" :key="tag" class="tag">#{{ tag }}</span>
+        <span v-for="tag in node.tags" :key="tag._id || tag" class="tag">
+          #{{ getTagName(tag) }}
+        </span>
       </span>
     </span>
     <div v-if="node.children && node.children.length" class="topic-children">
