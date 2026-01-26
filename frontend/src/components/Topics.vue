@@ -1,11 +1,13 @@
 
 <script setup>
 
+
 import { onMounted, computed, ref } from 'vue';
 import { useTopicsStore } from '../topics';
 import TopicNode from './TopicNode.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
 import { useRouter } from 'vue-router';
+import tagService from '../services/tagService';
 
 const topics = useTopicsStore();
 const tree = computed(() => topics.tree);
@@ -13,20 +15,9 @@ const router = useRouter();
 
 const showCreateModal = ref(false);
 const search = ref('');
-const tagFilter = ref('');
 
-const allTags = computed(() => {
-    // Zbierz wszystkie unikalne tagi z drzewa tematów
-    const tags = new Set();
-    function walk(nodes) {
-        (nodes || []).forEach(node => {
-            (node.tags || []).forEach(t => tags.add(t));
-            if (node.children) walk(node.children);
-        });
-    }
-    walk(tree.value);
-    return Array.from(tags);
-});
+const tagFilter = ref('');
+const allTags = ref([]);
 
 const filteredTree = computed(() => {
     function filterNodes(nodes) {
@@ -34,7 +25,6 @@ const filteredTree = computed(() => {
             const matchesSearch = !search.value || node.name.toLowerCase().includes(search.value.toLowerCase());
             const matchesTag = !tagFilter.value || (node.tags || []).includes(tagFilter.value);
             const filteredChildren = filterNodes(node.children || []);
-            // Pokaż node jeśli pasuje lub ma dzieci pasujące
             return (matchesSearch && matchesTag) || filteredChildren.length > 0;
         }).map(node => ({
             ...node,
@@ -52,8 +42,14 @@ const handleCreated = () => {
         topics.fetchTree();
 };
 
-onMounted(() => {
-        topics.fetchTree();
+
+onMounted(async () => {
+        await topics.fetchTree();
+        try {
+            allTags.value = await tagService.getTags();
+        } catch (e) {
+            allTags.value = [];
+        }
 });
 
 // const { socket } = useSocket();
@@ -70,7 +66,7 @@ onMounted(() => {
             <input v-model="search" placeholder="Szukaj tematu..." style="margin-right:1em;" />
             <select v-model="tagFilter">
                 <option value="">Wszystkie tagi</option>
-                <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
+                <option v-for="tag in allTags" :key="tag._id || tag.name || tag" :value="tag.name || tag">{{ tag.name || tag }}</option>
             </select>
         </div>
         <button @click="showCreateModal = true">Utwórz nowy temat</button>
