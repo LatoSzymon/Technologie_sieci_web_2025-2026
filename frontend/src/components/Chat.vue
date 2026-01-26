@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useSocketStore } from '../stores/socket';
 import { authStore } from '../auth';
 
+import { listAllUsers } from '../services/userService';
+
 const auth = authStore();
 const socketStore = useSocketStore();
 const isAdmin = computed(() => auth.user?.role === 'admin');
@@ -10,13 +12,21 @@ const isAdmin = computed(() => auth.user?.role === 'admin');
 const messages = ref([]);
 const toUserId = ref('');
 const newMessage = ref('');
+const users = ref([]);
 
 const handleAdminNotify = (data) => {
 	messages.value.push({ type: 'notify', payload: data, ts: new Date() });
 };
 
-onMounted(() => {
+onMounted(async () => {
 	socketStore.on('admin:notify', handleAdminNotify);
+	if (isAdmin.value) {
+		try {
+			users.value = await listAllUsers();
+		} catch (e) {
+			users.value = [];
+		}
+	}
 });
 
 onBeforeUnmount(() => {
@@ -44,7 +54,12 @@ const send = () => {
 	<div>
 		<div style="margin-bottom:1rem;">
 			<div v-if="isAdmin">
-				<input v-model="toUserId" placeholder="ID użytkownika" />
+				<select v-model="toUserId">
+					<option value="">Wybierz użytkownika</option>
+					<option v-for="u in users" :key="u._id || u.id" :value="u._id || u.id">
+						{{ u.login || u.email || u._id || u.id }}
+					</option>
+				</select>
 			</div>
 			<input v-model="newMessage" placeholder="Wiadomość" style="width:60%" />
 			<button @click="send">Wyślij</button>
