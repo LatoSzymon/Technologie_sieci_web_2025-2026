@@ -22,7 +22,15 @@ const tagRoutes = require("./routes/tagRoutes");
 const app = express();
 app.use(morgan("dev"));
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: function(origin, callback) {
+        const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://localhost:5173', 'https://127.0.0.1:5173'];
+        // Dopuszczaj requesty bez origin (np. mobile apps, curl)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json());

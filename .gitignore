@@ -4,3 +4,4 @@ certificate/server.key
 *.txt
 *postman*
 *.pdf
+*.md

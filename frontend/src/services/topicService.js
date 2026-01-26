@@ -31,4 +31,9 @@ const createSubtopic = async ({ parentId, name, description, tags }) => {
     return res.data;
 };
 
-export {getTopicById, getTopicTree, getTopicSubtree, blockUserInTopic, unblockUserInTopic, createSubtopic};
+const createTopic = async ({ name, tags }) => {
+    const res = await api.post('/topics', { name, tags });
+    return res.data;
+};
+
+export {getTopicById, getTopicTree, getTopicSubtree, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic};

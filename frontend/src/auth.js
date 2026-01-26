@@ -5,6 +5,7 @@ import { useSocketStore } from './stores/socket';
 
 const authStore = defineStore('auth', () => {
     const user = ref(null);
+    const blocked = ref(false);
     const loading = ref(true);
     const isLoggedIn = computed(() => !!user.value);
     const isAdmin = computed(() => user.value?.role === 'admin');
@@ -36,10 +37,11 @@ const authStore = defineStore('auth', () => {
         socketStore.disconnect();
         
         user.value = null;
+        blocked.value = false;
         await logoutMe();
     };
 
-    return { user, isLoggedIn, isApproved, isAdmin, fetchUser, logout, loading };
+    return { user, blocked, isLoggedIn, isApproved, isAdmin, fetchUser, logout, loading };
 });
 
 export { authStore };

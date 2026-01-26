@@ -27,10 +27,23 @@ export const usePostStore = defineStore('posts', () => {
         });
     };
 
+    const updatePostLikes = (postId, likesCount, liked, likes) => {
+        const post = posts.value.find(p => (p._id || p.id) === postId);
+        if (post) {
+            post.likesCount = likesCount;
+            post.userLiked = liked;
+            // Jeśli websocket przesłał pełny array likes, update go
+            if (likes && Array.isArray(likes)) {
+                post.likes = likes;
+            }
+        }
+    };
+
     return {
         posts,
         setPosts,
         addPost,
-        removePost
+        removePost,
+        updatePostLikes
     };
 });

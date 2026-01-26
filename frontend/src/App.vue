@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { authStore } from './auth';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, onBeforeUnmount } from 'vue';
 import Notifications from './components/Notifications.vue';
 
 const auth = authStore();
@@ -12,9 +12,35 @@ const handleLogout = () => {
   router.push('/login');
 }
 
+const handleUserBlocked = (e) => {
+  console.log('User blocked event received:', e.detail);
+  alert('Zostałeś zablokowany przez moderatora');
+  auth.logout();
+  router.push('/login');
+};
+
+const handleUserUnblocked = (e) => {
+  console.log('User unblocked event received:', e.detail);
+  alert('Zostałeś odblokowany!');
+};
+
+const handleUserApproved = (e) => {
+  console.log('User approved event received:', e.detail);
+  alert('Twoje konto zostało zaakceptowane! Proszę odśwież stronę.');
+};
+
 onMounted(() => {
   auth.fetchUser();
-})
+  window.addEventListener('user-blocked', handleUserBlocked);
+  window.addEventListener('user-unblocked', handleUserUnblocked);
+  window.addEventListener('user-approved', handleUserApproved);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('user-blocked', handleUserBlocked);
+  window.removeEventListener('user-unblocked', handleUserUnblocked);
+  window.removeEventListener('user-approved', handleUserApproved);
+});
 </script>
 
 <template>
@@ -26,7 +52,6 @@ onMounted(() => {
     <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
     <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
     <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
-    <router-link to="/chat" v-if="auth.isLoggedIn">Chat</router-link>
     <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
     <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
     <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
