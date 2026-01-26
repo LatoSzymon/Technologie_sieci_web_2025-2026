@@ -22,7 +22,6 @@ const approveUser = async (req, res) => {
             return res.status(404).json({message: "użytkownik nie istnieje"});
         }
 
-        // WebSocket admin notification
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {

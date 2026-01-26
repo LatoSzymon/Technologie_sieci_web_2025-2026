@@ -132,7 +132,7 @@ const deletePost = async (req, res) => {
         const userId = req.user.userId;
         const userRole = req.user.role;
 
-        const post = Post.findById(postId);
+        const post = await Post.findById(postId);
 
         if (!post) {
             return res.status(404).json({message: "Nie udało się znaleźć posta o tym id"});    
@@ -141,7 +141,7 @@ const deletePost = async (req, res) => {
         if (userRole === "admin" || userId === post.authorId) {
             post.isDeleted = true;
             await post.save();
-             return res.status(200).json({message: "Usunięto post", post});
+            return res.status(200).json({message: "Usunięto post", post});
         } else {
              return res.status(403).json({message: "Aniś admin, ani właściciel posta"});
         }

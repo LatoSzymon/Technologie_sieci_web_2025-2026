@@ -61,14 +61,14 @@ const initSocket = (server) => {
         // Dołączanie do room tematu
         socket.on("join-topic", (topicId) => {
             socket.join(`topic:${topicId}`);
-            console.log(`✅ User ${socket.userId} joined topic:${topicId}`);
-            console.log(`👥 Rooms for socket ${socket.id}:`, Array.from(socket.rooms));
+            console.log(`User ${socket.userId} joined topic:${topicId}`);
+            console.log(`Rooms for socket ${socket.id}:`, Array.from(socket.rooms));
         });
 
         // Opuszczanie room tematu
         socket.on("leave-topic", (topicId) => {
             socket.leave(`topic:${topicId}`);
-            console.log(`👋 User ${socket.userId} left topic:${topicId}`);
+            console.log(`User ${socket.userId} left topic:${topicId}`);
         });
 
         // Admin chat

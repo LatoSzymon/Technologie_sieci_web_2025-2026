@@ -34,7 +34,6 @@ const register = async (req, res) => {
 
         await user.save();
 
-        // WebSocket admin notification
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {

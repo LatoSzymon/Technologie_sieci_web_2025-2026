@@ -16,11 +16,11 @@ const authStore = defineStore('auth', () => {
             const res = await getMe();
             user.value = res;
             
-            console.log('👤 [AuthStore] User fetched:', res);
+            console.log('User fetched:', res);
             
             // Po zalogowaniu połącz WebSocket
             if (res) {
-                console.log('🔌 [AuthStore] Connecting WebSocket...');
+                console.log('Connecting WebSocket...');
                 const socketStore = useSocketStore();
                 socketStore.connect();
             }
@@ -32,7 +32,6 @@ const authStore = defineStore('auth', () => {
     };
 
     const logout = async () => {
-        // Rozłącz socket przed wylogowaniem
         const socketStore = useSocketStore();
         socketStore.disconnect();
         
