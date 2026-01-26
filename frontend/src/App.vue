@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router';
 import { authStore } from './auth';
 import { computed, onMounted } from 'vue';
+import Notifications from './components/Notifications.vue';
 
 const auth = authStore();
 const router = useRouter();
@@ -14,7 +15,6 @@ const handleLogout = () => {
 onMounted(() => {
   auth.fetchUser();
 })
-
 </script>
 
 <template>
@@ -32,6 +32,7 @@ onMounted(() => {
     <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
     <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
   </nav>
+  <Notifications />
   <main>
     <router-view />
   </main>
