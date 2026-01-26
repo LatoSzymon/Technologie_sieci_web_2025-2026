@@ -99,6 +99,20 @@ export const useSocketStore = defineStore('socket', () => {
             window.__adminNotifications.push({ ...data, ts: new Date() });
             window.dispatchEvent(new CustomEvent('admin-notify', { detail: data }));
         });
+
+        socket.value.on('topic:userBlocked', (data) => {
+            console.log('[WebSocket] topic:userBlocked received', data);
+            const topicsStore = useTopicsStore();
+            topicsStore.fetchTree();
+            window.dispatchEvent(new CustomEvent('topic-user-blocked', { detail: data }));
+        });
+
+        socket.value.on('topic:userUnblocked', (data) => {
+            console.log('[WebSocket] topic:userUnblocked received', data);
+            const topicsStore = useTopicsStore();
+            topicsStore.fetchTree();
+            window.dispatchEvent(new CustomEvent('topic-user-unblocked', { detail: data }));
+        });
     };
 
     const disconnect = () => {
