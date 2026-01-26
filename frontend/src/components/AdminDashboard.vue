@@ -1,7 +1,25 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { listUnapprovedUsers, approveUser, blockUser, unblockUser } from '../services/adminService';
 import Chat from './Chat.vue';
+
+const notifications = ref([]);
+const handleNotify = (e) => {
+	notifications.value.unshift({ ...(e.detail || {}), ts: new Date() });
+};
+
+onMounted(() => {
+	window.addEventListener('admin-notify', handleNotify);
+	// Load any notifications that arrived before mount
+	if (window.__adminNotifications) {
+		notifications.value = [...window.__adminNotifications].reverse();
+	}
+	fetchPending();
+});
+
+onBeforeUnmount(() => {
+	window.removeEventListener('admin-notify', handleNotify);
+});
 
 const pendingUsers = ref([]);
 const loading = ref(false);
@@ -63,6 +81,20 @@ onMounted(fetchPending);
 		<div v-if="actionInfo" style="color:green">{{ actionInfo }}</div>
 
 		<section>
+			<h3>Powiadomienia administracyjne</h3>
+			<ul v-if="notifications.length">
+				<li v-for="(n, idx) in notifications" :key="idx">
+					<small>{{ n.ts?.toLocaleString?.() || '' }}</small>
+					<span v-if="n.type === 'new-user'">[Nowa rejestracja]</span>
+					<span v-else-if="n.type === 'user-approved'">[Akceptacja]</span>
+					<span v-else>[Inne]</span>
+					{{ n.message }}
+				</li>
+			</ul>
+			<div v-else><em>Brak powiadomień.</em></div>
+		</section>
+
+		<section>
 			<h3>Niezaakceptowani użytkownicy</h3>
 			<div v-if="pendingUsers.length === 0"><em>Brak oczekujących.</em></div>
 			<ul>
@@ -86,5 +118,4 @@ onMounted(fetchPending);
 			<Chat />
 		</section>
 	</div>
-  
 </template>

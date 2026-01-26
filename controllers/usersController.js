@@ -33,6 +33,23 @@ const register = async (req, res) => {
         });
 
         await user.save();
+
+        // WebSocket admin notification
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to('admins').emit('admin:notify', {
+                    type: 'new-user',
+                    login: user.login,
+                    mail: user.mail,
+                    userId: user._id,
+                    message: `Nowa rejestracja: ${user.login} (${user.mail})`
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket admin notify (register) error:', e);
+        }
+
         return res.status(201).json({ message: "Konto utworzone. Czeka na akceptację administratora." });
     } catch (err) {
         console.error(err);

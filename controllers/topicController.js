@@ -65,7 +65,7 @@ const createTopic = async (req, res) => {
                 return res.status(404).json({message: "Podany temat nadrzędny nie istnieje"});
             }
 
-            const isModerator = parent.ownerId.equals(userId) || parent.moderatorsId.some(id => id.equals(userId));
+            const isModerator = parent.ownerId.equals(userId) || parent.moderatorsId.some(id => id.equals(userId)) || req.user.role === "admin";
             if (!isModerator) {
                 return res.status(403).json({message: "Odmowa dostępu. Użytkowmin musi być moderatorem tematu nadrzędnego"});
             }

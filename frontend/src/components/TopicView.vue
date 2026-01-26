@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch, computed } from 'vue';
+import { onMounted, watch, computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';

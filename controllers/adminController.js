@@ -22,6 +22,22 @@ const approveUser = async (req, res) => {
             return res.status(404).json({message: "użytkownik nie istnieje"});
         }
 
+        // WebSocket admin notification
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to('admins').emit('admin:notify', {
+                    type: 'user-approved',
+                    login: user.login,
+                    mail: user.mail,
+                    userId: user._id,
+                    message: `Użytkownik zaakceptowany: ${user.login} (${user.mail})`
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket admin notify (approve) error:', e);
+        }
+
         return res.status(200).json({message: "Użytkownik został zaakceptowany"});
     } catch (er) {
         return res.status(500).json({message: "Błąd przy akceptowaniu rejestracji", er});

@@ -15,7 +15,6 @@ export const useSocketStore = defineStore('socket', () => {
             return;
         }
 
-        // Połącz z backendem (HTTPS)
         socket.value = io('https://localhost:3443', {
             withCredentials: true,
             transports: ['websocket', 'polling']
@@ -54,6 +53,12 @@ export const useSocketStore = defineStore('socket', () => {
                 window.location.href = '/login';
             }
         });
+        
+        socket.value.on('admin:notify', (data) => {
+            if (!window.__adminNotifications) window.__adminNotifications = [];
+            window.__adminNotifications.push({ ...data, ts: new Date() });
+            window.dispatchEvent(new CustomEvent('admin-notify', { detail: data }));
+        });
     };
 
     const disconnect = () => {
@@ -70,8 +75,7 @@ export const useSocketStore = defineStore('socket', () => {
             console.warn('Socket not connected, cannot join topic');
             return;
         }
-        
-        // Opuść poprzedni temat jeśli był
+
         if (currentTopicId.value && currentTopicId.value !== topicId) {
             socket.value.emit('leave-topic', currentTopicId.value);
         }
@@ -94,16 +98,14 @@ export const useSocketStore = defineStore('socket', () => {
     const on = (event, callback) => {
         if (socket.value) {
             console.log(`Registering listener for event: ${event}`);
-            
-            // Wrap callback to add logging
+
             const wrappedCallback = (...args) => {
                 console.log(`Event received: ${event}`, args);
                 callback(...args);
             };
             
             socket.value.on(event, wrappedCallback);
-            
-            // Store original callback reference for removal
+
             if (!callback._wrapped) {
                 callback._wrapped = wrappedCallback;
             }
