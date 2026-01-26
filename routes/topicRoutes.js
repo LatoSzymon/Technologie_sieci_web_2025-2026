@@ -7,9 +7,9 @@ router.use(passport.authenticate('jwt', { session: false }), isApproved);
 
 router.get("/tree", getTopicTree);
 router.get("/tree/:id", getTopicSubtree);
+router.get("/:topicId/posts", getPostsForTopic);
 router.get("/", listRootTopics);
 router.get("/:id", getTopicById);
-router.get("/:topicId/posts", getPostsForTopic);
 router.post("/", createTopic);
 router.post("/block-user", blockUserInTopic);
 router.post("/unblock-user", unblockUserInTopic);

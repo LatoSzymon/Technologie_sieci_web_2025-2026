@@ -27,10 +27,37 @@ const isBanned = computed(() => {
   const topic = topics.currentTopic;
   const userId = auth.user?.id || auth.user?._id;
   if (!topic || !userId || !topic.bannedUsersIds) return false;
-  // bannedUsersIds can be array of strings or objects
-  return topic.bannedUsersIds.some(
+  
+  const isBannedInList = topic.bannedUsersIds.some(
     id => (typeof id === 'object' ? id._id === userId : id === userId)
   );
+  
+  if (!isBannedInList) return false;
+
+  if (topic.blockedUserExceptions && Array.isArray(topic.blockedUserExceptions)) {
+    const exception = topic.blockedUserExceptions.find(exc => {
+      const excUserId = typeof exc.userId === 'object' ? exc.userId._id : exc.userId;
+      return excUserId === userId;
+    });
+    
+    if (exception && exception.allowedInTopicIds && Array.isArray(exception.allowedInTopicIds)) {
+      const isInAllowedList = exception.allowedInTopicIds.some(topicId => {
+        const allowedId = typeof topicId === 'object' ? topicId._id : topicId;
+        const currentId = topic._id;
+        return allowedId === currentId;
+      });
+      
+      if (isInAllowedList) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+});
+
+const isBlocked = computed(() => {
+  return auth.blocked === true;
 });
 
 const canModerate = computed(() => {
@@ -50,17 +77,19 @@ const showBlockModal = ref(false);
 const showCreateSubtopic = ref(false);
 
 const handleBlocked = () => {
-	// Refresh topic to reflect banned list change
 	topics.fetchTopic(route.params.id);
 };
 const handleCreated = () => {
-	// Refresh children
 	topics.fetchTopic(route.params.id);
 };
 </script>
 
 <template>
-	<div v-if="topics.loading">Ładowanie...</div>
+	<div v-if="isBlocked" style="padding: 2rem; background: #ffe6e6; border: 2px solid red; border-radius: 4px;">
+		<h2 style="color: red;">Zostałeś zablokowany</h2>
+		<p>Nie możesz publikować postów w tym temacie, ponieważ moderator Cię zablokował.</p>
+	</div>
+	<div v-else-if="topics.loading">Ładowanie...</div>
 	<div v-else-if="topics.error">Błąd: {{ topics.error }}</div>
 	<div v-else-if="isBanned">
 		<div style="color: red; font-weight: bold;">Nie masz dostępu do tego tematu (zostałeś zbanowany).</div>

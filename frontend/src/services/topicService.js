@@ -16,8 +16,8 @@ const getTopicSubtree = async (id) => {
     return res.data.tree;
 };
 
-const blockUserInTopic = async ({ topicId, userId }) => {
-    const res = await api.post('/topics/block-user', { topicId, userId });
+const blockUserInTopic = async ({ topicId, userId, exceptTopicIds = [] }) => {
+    const res = await api.post('/topics/block-user', { topicId, userId, exceptTopicIds });
     return res.data;
 };
 
