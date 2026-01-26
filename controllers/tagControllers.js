@@ -51,21 +51,21 @@ const addTag = async (req, res) => {
 const deleteTag = async (req, res) => {
     try {
         const tagId = req.params.tagId;
-        const deleted = await Tag.findByIdAndDelete(tagId);
+        const tag = await Tag.findByIdAndDelete(tagId);
          if (!tag) {
             return res.status(404).json({ message: "Tag z takim id? Coś takiego nie istnieje" });
         }
 
         await Post.updateMany(
-            { tags: tag.name },
-            { $pull: { tags: tag.name } }
+            { tags: tag._id },
+            { $pull: { tags: tag._id } }
         );
 
         await Topic.updateMany(
-            { tags: tag.name },
-            { $pull: { tags: tag.name } }
+            { tags: tag._id },
+            { $pull: { tags: tag._id } }
         );
-        return res.status(204).json({message: "Usunięto tag", deleted});
+        return res.status(204).json({message: "Usunięto tag"});
     } catch (err) {
         console.error(err);
         return res.status(500).json({message: "Usuwanie tagu nie powiodło się", err});

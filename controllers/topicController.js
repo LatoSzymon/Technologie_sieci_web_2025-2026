@@ -1,6 +1,7 @@
 const Topic = require('../models/Topic');
 const User = require('../models/User');
 const Post = require("../models/Post");
+const Tag = require("../models/Tag");
 
 const getAllSubtopics = async (topicId) => {
     const topic = await Topic.findById(topicId);
@@ -68,6 +69,20 @@ const createTopic = async (req, res) => {
             name = `Temat użytkownika ${req.user.login}`;
         }
 
+        let validatedTags = [];
+        if (tags && Array.isArray(tags)) {
+            for (const tagId of tags) {
+                try {
+                    const tag = await Tag.findById(tagId);
+                    if (tag) {
+                        validatedTags.push(tagId);
+                    }
+                } catch (e) {
+                    console.warn(`Invalid tag ID: ${tagId}`);
+                }
+            }
+        }
+
         let parent = null;
         if (parentId) {
             parent = await Topic.findById(parentId);
@@ -85,7 +100,7 @@ const createTopic = async (req, res) => {
         const inheritModeratorsId = parent ? [...parent.moderatorsId, parent.ownerId] : [];
 
         const topic = new Topic({
-            name, description: description || '', tags: tags || [], ownerId: userId,
+            name, description: description || '', tags: validatedTags, ownerId: userId,
             moderatorsId: inheritModeratorsId.filter(id => !id.equals(userId)), parent: parentId || null
         })
 
