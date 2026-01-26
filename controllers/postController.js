@@ -1,5 +1,3 @@
-//create, edit, delete, like, dislike
-
 const Post = require("../models/Post");
 const Topic = require("../models/Topic");
 const { post } = require("../routes/userRoutes");
@@ -32,11 +30,9 @@ const createPost = async (req, res) => {
         });
 
         await post.save();
-        
-        // Populate author data for socket emission
+
         await post.populate('authorId', 'login email');
-        
-        // Emituj event websocket po utworzeniu posta
+
         try {
             const io = req.app.get('io');
             if (io) {
@@ -47,8 +43,7 @@ const createPost = async (req, res) => {
                     content: post.content.substring(0, 50) + '...',
                     author: post.authorId?.login
                 });
-                
-                // Emituj tylko do użytkowników oglądających ten temat
+
                 io.to(`topic:${topicId}`).emit("post:new", post);
                 console.log(`✅ [PostController] Event emitted successfully`);
             } else {
@@ -68,7 +63,7 @@ const createPost = async (req, res) => {
 
 const toggleLike = async (req, res) => {
     try {
-        const {postId} = req.body;
+        const {postId} = req.params;
         const userId = req.user.userId;
 
         const post = await Post.findById(postId);
@@ -76,53 +71,46 @@ const toggleLike = async (req, res) => {
             return res.status(404).json({message: "Nie znaleziono posta"});
         }
 
-        const liked = post.likes.some(id => id === userId);
-        const disliked = post.dislikes.some(id => id === userId);
-
-        if (disliked) {
-            return res.status(403).json({message: "Nie polubisz nielubionego posta geniuszu"});
-        }
+        const userIdStr = userId.toString ? userId.toString() : String(userId);
+        const liked = post.likes.some(id => (id.toString ? id.toString() : String(id)) === userIdStr);
 
         if (liked) {
             post.likes.pull(userId);
         } else {
+            post.likes = post.likes.filter(id => (id.toString ? id.toString() : String(id)) !== userIdStr);
             post.likes.push(userId);
-        } 
+        }
+        
+        await post.save();
 
-        return res.status(200).json({message: "Poprawna zmiana stanu like'owania", liked});
+        const normalizedLikes = post.likes.map(id => id.toString ? id.toString() : String(id));
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${post.topicId}`).emit('post:liked', { 
+                    postId: post._id, 
+                    userId: userIdStr, 
+                    likesCount: post.likes.length,
+                    likes: normalizedLikes,
+                    liked: !liked 
+                });
+                console.log(`Emitted post:liked for post ${post._id}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (toggleLike):', e);
+        }
+
+        return res.status(200).json({
+            message: "Poprawna zmiana stanu like'owania", 
+            liked: !liked, 
+            likesCount: post.likes.length,
+            likes: normalizedLikes
+        });
 
     } catch (err) {
+        console.error(err);
         return res.status(500).json({message: "Nie udało się dodać like", err});
-    }
-}
-
-const toggleDislike = async (req, res) => {
-    try {
-        const {postId} = req.body;
-        const userId = req.user.userId;
-
-        const post = await Post.findById(postId);
-        if (!post) {
-            return res.status(404).json({message: "Nie znaleziono posta"});
-        }
-
-        const liked = post.likes.some(id => id === userId);
-        const disliked = post.dislikes.some(id => id === userId);
-
-        if (liked) {
-            return res.status(403).json({message: "Nie znielubisz lubionego posta geniuszu"});
-        }
-
-        if (disliked) {
-            post.likes.pull(userId);
-        } else {
-            post.likes.push(userId);
-        } 
-
-        return res.status(200).json({message: "Poprawna zmiana stanu like'owania", disliked});
-
-    } catch (err) {
-        return res.status(500).json({message: "Nie udało się dodać dislike", err});
     }
 }
 
@@ -141,6 +129,17 @@ const deletePost = async (req, res) => {
         if (userRole === "admin" || userId === post.authorId) {
             post.isDeleted = true;
             await post.save();
+
+            try {
+                const io = req.app.get && req.app.get('io');
+                if (io) {
+                    io.to(`topic:${post.topicId}`).emit('post:deleted', { postId: post._id, topicId: post.topicId });
+                    console.log(`Emitted post:deleted for post ${post._id}`);
+                }
+            } catch (e) {
+                console.error('WebSocket error (deletePost):', e);
+            }
+            
             return res.status(200).json({message: "Usunięto post", post});
         } else {
              return res.status(403).json({message: "Aniś admin, ani właściciel posta"});
@@ -155,4 +154,4 @@ const deletePost = async (req, res) => {
     }
 }
 
-module.exports = {createPost, toggleDislike, toggleLike, deletePost};
+module.exports = {createPost, toggleLike, deletePost};

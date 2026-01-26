@@ -32,6 +32,9 @@ const approveUser = async (req, res) => {
                     userId: user._id,
                     message: `Użytkownik zaakceptowany: ${user.login} (${user.mail})`
                 });
+
+                io.to(`user:${user._id}`).emit('user:approved', { userId: user._id, message: 'Twoje konto zostało zaakceptowane!' });
+                console.log(`Emitted user:approved to user:${user._id}`);
             }
         } catch (e) {
             console.error('WebSocket admin notify (approve) error:', e);

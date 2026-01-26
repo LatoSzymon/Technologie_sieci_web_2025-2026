@@ -67,6 +67,7 @@ const deleteTag = async (req, res) => {
         );
         return res.status(204).json({message: "Usunięto tag", deleted});
     } catch (err) {
+        console.error(err);
         return res.status(500).json({message: "Usuwanie tagu nie powiodło się", err});
     }
 };

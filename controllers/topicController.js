@@ -43,6 +43,17 @@ const blockUserInTopic = async (req, res) => {
                 { $push: { bannedUsersIds: userId } }
             );
         }
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('user:blocked', { userId, topicId, reason: req.body.reason || '' });
+                console.log(`Emitted user:blocked to user:${userId}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (blockUser):', e);
+        }
+        
         return res.status(200).json({ message: 'Użytkownik zablokowany w temacie i podtematach' });
     } catch (error) {
         return res.status(500).json({ message: 'Błąd blokowania użytkownika', error: error.message });
@@ -86,6 +97,17 @@ const createTopic = async (req, res) => {
         }
 
         await User.findByIdAndUpdate(userId, { $push: { OwnedTopics: topic._id } });
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.emit('topic:updated', { topicId: topic._id, action: 'created', topic });
+                console.log(`Emitted topic:updated for created topic ${topic._id}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (createTopic):', e);
+        }
+        
         return res.status(201).json({message: "Temat został utworzony", topic});
     } catch (error) {
         return res.status(500).json({ message: "Błąd przy tworzeniu tematu", error});
@@ -157,6 +179,17 @@ const unblockUserInTopic = async (req, res) => {
                 { $pull: { bannedUsersIds: userId } }
             );
         }
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('user:unblocked', { userId, topicId });
+                console.log(`Emitted user:unblocked to user:${userId}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (unblockUser):', e);
+        }
+        
         return res.status(200).json({ message: 'Użytkownik odblokowany w temacie i podtematach' });
     } catch (error) {
         return res.status(500).json({ message: 'Błąd odblokowywania użytkownika', error: error.message });
@@ -165,14 +198,22 @@ const unblockUserInTopic = async (req, res) => {
 
 const buildTree = async (parentId = null) => {
     try {
-        const topics = await Topic.find({parent: parentId, isHidden: false}).select('-bannedUsersIds');
+        const topics = await Topic.find({parent: parentId, isHidden: false})
+            .select('-bannedUsersIds')
+            .populate('tags', 'name');
         const tree = [];
 
         for (const topic of topics) {
             const children = await buildTree(topic._id);
 
             tree.push({
-                id: topic._id, name: topic.name, path: topic.path, children, isHidden: topic.isHidden, isClosed: topic.isClosed
+                id: topic._id, 
+                name: topic.name, 
+                path: topic.path, 
+                children, 
+                isHidden: topic.isHidden, 
+                isClosed: topic.isClosed,
+                tags: topic.tags
             });
         }
 
@@ -189,11 +230,18 @@ const getPostsForTopic = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
-        const posts = await Post.find({topicId, isDeleted: false})
+        let posts = await Post.find({topicId, isDeleted: false})
             .sort({createdAt: 1})       //surtowanie 1 to rosnąco, jak malejąco to -1
             .skip((page - 1) * limit)       //pomiń ileśtam rekordów po znalezieniu
             .limit(limit)               //pokaż tylko tyle ile limiit
             .populate('authorId', 'login');  //
+
+        posts = posts.map(post => {
+            const postObj = post.toObject();
+            const likesSet = new Set((postObj.likes || []).map(id => id.toString ? id.toString() : String(id)));
+            postObj.likes = Array.from(likesSet);
+            return postObj;
+        });
 
         const total = await Post.countDocuments({topicId, isDeleted: false});
 
