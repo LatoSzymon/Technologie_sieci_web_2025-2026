@@ -149,6 +149,8 @@ const deletePost = async (req, res) => {
 
 
     } catch (err) {
+        console.error(err);
+        
         return res.status(500).json({message: "Błąd usuwania posta", err});
     }
 }
