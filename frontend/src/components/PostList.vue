@@ -35,11 +35,10 @@ const handleNewPost = (post) => {
     console.log(`Comparing topicIds: post=${postTopicId}, current=${currentTopicId}`);
     
     if (postTopicId === currentTopicId) {
-        console.log('Topic matches!');
         postStore.addPost(post);
         console.log(' Post added to store');
     } else {
-        console.log(' Topic does not match, ignoring post');
+        console.log('Topic does not match, ignoring post');
     }
 };
 
@@ -106,14 +105,13 @@ const addPost = async () => {
 
 <template>
     <div>
+        <PostItem v-for="post in postStore.posts" :key="post._id || post.id" :post="post"/>
         <form @submit.prevent="addPost" style="margin-bottom: 1em;">
             <textarea v-model="newPostContent" rows="3" style="width:100%" placeholder="Napisz nowy post..." :disabled="isAdding"></textarea>
             <div>
                 <button type="submit" :disabled="isAdding || !newPostContent.trim()">Dodaj post</button>
                 <span v-if="addError" style="color:red; margin-left:1em;">{{ addError }}</span>
             </div>
-        </form>
-
-        <PostItem v-for="post in postStore.posts" :key="post._id || post.id" :post="post"/>
+        </form>    
     </div>
 </template>

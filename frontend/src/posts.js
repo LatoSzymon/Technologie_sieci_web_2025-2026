@@ -16,7 +16,7 @@ export const usePostStore = defineStore('posts', () => {
         });
         
         if (!exists) {
-            posts.value.unshift(post);
+            posts.value.push(post);
         }
     };
 
