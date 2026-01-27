@@ -32,7 +32,8 @@ const postSchema = new Schema({
         default: null
     },
     tags: [{
-        type: String
+        type: Schema.Types.ObjectId,
+        ref: "Tag"
     }],
     isDeleted: {
         type: Boolean,

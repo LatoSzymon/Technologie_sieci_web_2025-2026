@@ -199,7 +199,8 @@ const getTopicById = async (req, res) => {
         const topic = await Topic.findById(id)
             .populate('ownerId', 'login mail')
             .populate('moderatorsId', 'login mail')
-            .populate('children', 'name description');
+            .populate('children', 'name description')
+            .populate('tags');
 
         if (!topic) {
             return res.status(404).json({message: 'Taki temat nie istnieje'});
@@ -314,7 +315,15 @@ const getPostsForTopic = async (req, res) => {
             .sort({createdAt: 1})       //surtowanie 1 to rosnąco, jak malejąco to -1
             .skip((page - 1) * limit)       //pomiń ileśtam rekordów po znalezieniu
             .limit(limit)               //pokaż tylko tyle ile limiit
-            .populate('authorId', 'login');  //
+            .populate('authorId', 'login email')
+            .populate('tags')
+            .populate({
+                path: 'replyTo',
+                populate: {
+                    path: 'authorId',
+                    select: 'login email'
+                }
+            });
 
         posts = posts.map(post => {
             const postObj = post.toObject();

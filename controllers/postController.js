@@ -37,8 +37,15 @@ const createPost = async (req, res) => {
         await post.save();
 
         await post.populate('authorId', 'login email');
+        await post.populate('tags');
         if (replyTo) {
-            await post.populate('replyTo');
+            await post.populate({
+                path: 'replyTo',
+                populate: {
+                    path: 'authorId',
+                    select: 'login email'
+                }
+            });
         }
 
         try {
@@ -190,6 +197,7 @@ const updatePost = async (req, res) => {
 
         await post.save();
         await post.populate('authorId', 'login email');
+        await post.populate('tags');
 
         try {
             const io = req.app.get && req.app.get('io');
