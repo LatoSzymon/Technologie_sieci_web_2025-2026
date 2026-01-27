@@ -129,5 +129,82 @@ const logout = (req, res) => {
     return res.status(200).json({message: "Wylogowano"});
 };
 
-module.exports = { register, login, getMe, logout };
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { login } = req.body;
+        
+        // Walidacja unikalności nowego loginu
+        if (login) {
+            const exists = await User.findOne({ login, _id: { $ne: userId } });
+            if (exists) {
+                return res.status(409).json({ message: "Login już zajęty" });
+            }
+        }
+        
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { login: login || undefined },
+            { new: true, select: '-hash' }
+        );
+        
+        return res.status(200).json({ message: "Profil zaktualizowany", user });
+    } catch (error) {
+        return res.status(500).json({ message: "Błąd aktualizacji profilu", error });
+    }
+};
+
+const changePassword = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+        
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ 
+                message: "Wymagane pola: oldPassword, newPassword, confirmPassword" 
+            });
+        }
+        
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ 
+                message: "Nowe hasła nie są identyczne" 
+            });
+        }
+        
+        if (newPassword === oldPassword) {
+            return res.status(400).json({ 
+                message: "Nowe hasło musi być różne od starego" 
+            });
+        }
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Użytkownik nie znaleziony" });
+        }
+        
+        // Walidacja starego hasła
+        const passwordMatch = await bcrypt.compare(oldPassword, user.hash);
+        if (!passwordMatch) {
+            return res.status(401).json({ 
+                message: "Stare hasło jest nieprawidłowe" 
+            });
+        }
+        
+        // Haszuj nowe hasło
+        const newHash = await bcrypt.hash(newPassword, 12);
+        user.hash = newHash;
+        await user.save();
+        
+        return res.status(200).json({ 
+            message: "Hasło zostało zmienione" 
+        });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Błąd przy zmianie hasła", 
+            error 
+        });
+    }
+};
+
+module.exports = { register, login, getMe, logout, updateProfile, changePassword };
 
