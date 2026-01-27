@@ -1,7 +1,7 @@
 import api from "./api";
 
-const fetchPosts = async (topicId) => {
-    const res = await api.get(`/topics/${topicId}/posts?limit=5000`);
+const fetchPosts = async (topicId, page = 1, limit = 20) => {
+    const res = await api.get(`/topics/${topicId}/posts?page=${page}&limit=${limit}`);
     return res.data;
 };
 

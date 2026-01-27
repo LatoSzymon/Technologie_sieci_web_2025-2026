@@ -2,7 +2,6 @@ import api from "./api";
 
 const getTopicTree = async () => {
     const res = await api.get('/topics/tree');
-
     return res.data.tree;
 };
 
