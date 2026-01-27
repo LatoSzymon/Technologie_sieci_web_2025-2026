@@ -12,7 +12,7 @@ const getTopicById = async (id) => {
 };
 
 const getTopicSubtree = async (id) => {
-    const res = await api.get(`/topics/${id}/tree`);
+    const res = await api.get(`/topics/tree/${id}`);
     return res.data.tree;
 };
 
@@ -36,4 +36,19 @@ const createTopic = async ({ name, tags }) => {
     return res.data;
 };
 
-export {getTopicById, getTopicTree, getTopicSubtree, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic};
+const updateTopic = async (topicId, data) => {
+    const res = await api.put(`/topics/${topicId}`, data);
+    return res.data;
+};
+
+const promoteModerator = async (topicId, userId) => {
+    const res = await api.post('/topics/promote-moderator', { topicId, userId });
+    return res.data;
+};
+
+const removeModerator = async (topicId, userId) => {
+    const res = await api.post('/topics/remove-moderator', { topicId, userId });
+    return res.data;
+};
+
+export {getTopicById, getTopicTree, getTopicSubtree, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
