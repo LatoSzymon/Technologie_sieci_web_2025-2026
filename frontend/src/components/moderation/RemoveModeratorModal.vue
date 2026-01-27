@@ -15,7 +15,6 @@ const emit = defineEmits(['close', 'removed']);
 const topics = useTopicsStore();
 const loading = ref(false);
 const error = ref('');
-
 const remove = async () => {
     loading.value = true;
     error.value = '';
