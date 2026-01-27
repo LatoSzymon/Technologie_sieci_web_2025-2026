@@ -170,14 +170,12 @@ const handleUnhideTopic = async (e) => {
 
 .topic-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .topic-name {
   cursor: pointer;
-  flex: 1;
 }
 
 .closed {
@@ -211,17 +209,20 @@ span {
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 .btn-action {
-  padding: 6px 12px;
+  padding: 5px 10px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: 0.8em;
   font-weight: bold;
   white-space: nowrap;
   transition: all 0.2s ease;
+  flex: 1;
+  min-width: 60px;
 }
 
 .btn-close, .btn-open {
