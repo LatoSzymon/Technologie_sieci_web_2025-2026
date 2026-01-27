@@ -194,7 +194,7 @@ const toggleLike = async () => {
     <div class="author">{{ authorName }}</div>
     
     <div v-if="replyToPostId" class="reply-indicator">
-      <small class="reply-text">↪ W odpowiedzi na post (ID: {{ replyToPostId }})</small>
+      <small class="reply-text">W odpowiedzi na post (ID: {{ replyToPostId }})</small>
     </div>
     
     <div v-if="!isEditingPost">
@@ -282,9 +282,9 @@ const toggleLike = async () => {
           <button @click="blockUserInTopic" :disabled="isBlocking" class="btn-block-topic" title="Zablokuj w tym temacie">Blokuj w temacie</button>
         </template>
         <template v-if="isAdmin">
-          <button @click="blockUserGlobally" :disabled="isBlocking" class="btn-block-global" title="Zablokuj globalnie">🚫 Blokuj globalnie</button>
+          <button @click="blockUserGlobally" :disabled="isBlocking" class="btn-block-global" title="Zablokuj globalnie">Blokuj globalnie</button>
         </template>
-        <button @click="emit('reply', post)" class="btn-reply">↪ Odpowiedz</button>
+        <button @click="emit('reply', post)" class="btn-reply">Odpowiedz</button>
       </div>
       <span v-if="error" class="error-text">{{ error }}</span>
     </div>

@@ -1,13 +1,13 @@
 <template>
   <div v-if="show" class="modal-backdrop">
     <div class="modal">
-      <h2>Utwórz nowy temat</h2>
+      <h2>{{ parentId ? 'Utwórz podtemat' : 'Utwórz nowy temat' }}</h2>
       <form @submit.prevent="submit">
         <label>Nazwa tematu:
           <input v-model="name" required />
         </label>
         
-        <label>Tagi (wybierz):
+        <label>Tagi:
           <div class="tags-selector">
             <div class="available-tags">
               <h4>Dostępne tagi:</h4>
@@ -42,7 +42,7 @@
         </label>
 
         <div class="buttons">
-          <button type="submit">Utwórz</button>
+          <button type="submit">{{ parentId ? 'Utwórz podtemat' : 'Utwórz' }}</button>
           <button type="button" @click="$emit('close')">Anuluj</button>
         </div>
       </form>
@@ -57,7 +57,8 @@ import { useTopicsStore } from '../topics';
 import tagService from '../services/tagService';
 
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
+  parentId: String
 });
 const emit = defineEmits(['close', 'created']);
 
@@ -88,10 +89,19 @@ const getTagName = (tagId) => {
 const submit = async () => {
   error.value = '';
   try {
-    await topics.createTopic({
+    const payload = {
       name: name.value,
       tags: selectedTagIds.value
-    });
+    };
+    
+    if (props.parentId) {
+      payload.parentId = props.parentId;
+      const { createSubtopic } = await import('../services/topicService');
+      await createSubtopic(payload);
+    } else {
+      await topics.createTopic(payload);
+    }
+    
     emit('created');
     emit('close');
     name.value = '';
@@ -110,14 +120,14 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 .modal {
-  background: #fff;
+  background: #302c2ceb;
   padding: 2em;
   border-radius: 8px;
   min-width: 400px;

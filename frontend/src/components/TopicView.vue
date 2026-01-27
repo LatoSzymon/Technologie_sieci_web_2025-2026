@@ -5,7 +5,7 @@ import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
 import PostList from './PostList.vue';
 import BlockUserModal from './moderation/BlockUserModal.vue';
-import CreateSubtopicModal from './moderation/CreateSubtopicModal.vue';
+import CreateTopicModal from './CreateTopicModal.vue';
 import PromoteModeratorModal from './moderation/PromoteModeratorModal.vue';
 import RemoveModeratorModal from './moderation/RemoveModeratorModal.vue';
 import * as topicService from '../services/topicService';
@@ -154,10 +154,10 @@ watch(() => topics.currentTopic, () => {
 		<h2 class="topic-heading">
 			{{ topics.currentTopic.name }}
 			<span v-if="topics.currentTopic.isClosed" class="badge-closed">
-				🔒 Zamknięty
+				Zamknięty
 			</span>
 			<span v-if="topics.currentTopic.isHidden" class="badge-hidden">
-				👁️ Ukryty
+				Ukryty
 			</span>
 		</h2>
 		<p>{{ topics.currentTopic.description }}</p>
@@ -256,8 +256,8 @@ watch(() => topics.currentTopic, () => {
 			@close="showRemoveModal = false" 
 			@removed="handleRemoved" />
 
-		<CreateSubtopicModal 
-			:open="showCreateSubtopic" 
+		<CreateTopicModal 
+			:show="showCreateSubtopic" 
 			:parent-id="topics.currentTopic._id" 
 			@close="showCreateSubtopic = false" 
 			@created="handleCreated" />
