@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const Topic = require("../models/Topic");
+const Post = require("../models/Post");
 
 const listRegisteredButNotAcceptedUsers = async (req, res) => {
     try {
@@ -65,6 +67,7 @@ const blockUser = async (req, res) => {
                     userId: user._id,
                     message: `Użytkownik zablokowany: ${user.login} (${user.mail})`
                 });
+                io.to('admins').emit('admin:users-updated', { type: 'blocked', user });
                 console.log(`Emitted user:blocked to user:${user._id}`);
             }
         } catch (e) {
@@ -96,6 +99,7 @@ const unblockUser = async (req, res) => {
                     userId: user._id,
                     message: `Użytkownik odblokowany: ${user.login} (${user.mail})`
                 });
+                io.to('admins').emit('admin:users-updated', { type: 'unblocked', user });
                 console.log(`Emitted user:unblocked to user:${user._id}`);
             }
         } catch (e) {
@@ -126,4 +130,189 @@ const listAllNonAdminUsers = async (req, res) => {
     }
 };
 
-module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser, listBlockedUsers, listAllNonAdminUsers};
+const closeTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (topic.isClosed) {
+            return res.status(409).json({message: "Temat jest już zamknięty"});
+        }
+
+        topic.isClosed = true;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:closed', {topicId, message: 'Ten temat został zamknięty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (closeTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat zamknięty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd zamykania tematu", err});
+    }
+};
+
+const openTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (!topic.isClosed) {
+            return res.status(409).json({message: "Temat jest już otwarty"});
+        }
+
+        topic.isClosed = false;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:opened', {topicId, message: 'Ten temat został otwarty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (openTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat otwarty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd otwierania tematu", err});
+    }
+};
+
+const hideTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (topic.isHidden) {
+            return res.status(409).json({message: "Temat jest już ukryty"});
+        }
+
+        topic.isHidden = true;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:hidden', {topicId, message: 'Ten temat został ukryty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (hideTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat ukryty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd ukrywania tematu", err});
+    }
+};
+
+const unhideTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (!topic.isHidden) {
+            return res.status(409).json({message: "Temat nie jest ukryty"});
+        }
+
+        topic.isHidden = false;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:unhidden', {topicId, message: 'Ten temat jest teraz widoczny'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (unhideTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat odkryty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd odkrywania tematu", err});
+    }
+};
+
+const deleteUser = async (req, res) => {
+    try {
+        const {userId} = req.body;
+
+        if (!userId) {
+            return res.status(400).json({message: "Nie podano ID użytkownika"});
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({message: "Użytkownik nie znaleziony"});
+        }
+
+        if (user.role === 'admin') {
+            return res.status(403).json({message: "Nie można usunąć administratora"});
+        }
+
+        await User.findByIdAndDelete(userId);
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to('admins').emit('admin:notify', {
+                    type: 'user-deleted',
+                    login: user.login,
+                    userId: user._id,
+                    message: `Użytkownik usunięty: ${user.login}`
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket error (deleteUser):', e);
+        }
+
+        return res.status(200).json({message: "Użytkownik usunięty"});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd usuwania użytkownika", err});
+    }
+};
+
+
+module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser, listBlockedUsers, listAllNonAdminUsers, closeTopic, openTopic, hideTopic, unhideTopic, deleteUser};
