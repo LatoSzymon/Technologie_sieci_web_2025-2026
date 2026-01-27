@@ -4,7 +4,7 @@ const { post } = require("../routes/userRoutes");
 
 const createPost = async (req, res) => {
     try {
-        const {topicId, content, tags} = req.body;
+        const {topicId, content, codeBlocks, replyTo, tags} = req.body;
         const authorId = req.user.userId;
 
         if (!topicId || !content) {
@@ -26,18 +26,26 @@ const createPost = async (req, res) => {
         }
 
         const post = new Post({
-            topicId, authorId, content, tags: tags || []
+            topicId, 
+            authorId, 
+            content, 
+            codeBlocks: codeBlocks || [],
+            replyTo: replyTo || null,
+            tags: tags || []
         });
 
         await post.save();
 
         await post.populate('authorId', 'login email');
+        if (replyTo) {
+            await post.populate('replyTo');
+        }
 
         try {
             const io = req.app.get('io');
             if (io) {
-                console.log(`📡 [PostController] Emitting post:new to topic:${topicId}`);
-                console.log(`📄 [PostController] Post data:`, {
+                console.log(`Emitting post:new to topic:${topicId}`);
+                console.log(`Post data:`, {
                     id: post._id,
                     topicId: post.topicId,
                     content: post.content.substring(0, 50) + '...',
@@ -45,12 +53,12 @@ const createPost = async (req, res) => {
                 });
 
                 io.to(`topic:${topicId}`).emit("post:new", post);
-                console.log(`✅ [PostController] Event emitted successfully`);
+                console.log(`Event emitted successfully`);
             } else {
-                console.error('❌ [PostController] io is not available on app');
+                console.error('io is not available on app');
             }
         } catch (e) {
-            console.error("❌ [PostController] Nie udało się wysłać post:new przez websocket", e);
+            console.error("Nie udało się wysłać post:new przez websocket", e);
         }
         return res.status(201).json({message: "Utworzono post", post});
 
@@ -154,4 +162,51 @@ const deletePost = async (req, res) => {
     }
 }
 
-module.exports = {createPost, toggleLike, deletePost};
+const updatePost = async (req, res) => {
+    try {
+        const {postId} = req.params;
+        const {content, codeBlocks} = req.body;
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({message: "Treść posta nie może być pusta"});
+        }
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({message: "Nie znaleziono posta"});
+        }
+
+        if (userRole !== "admin" && userId.toString() !== post.authorId.toString()) {
+            return res.status(403).json({message: "Nie masz uprawnień do edycji tego posta"});
+        }
+
+        post.content = content;
+        if (codeBlocks) {
+            post.codeBlocks = codeBlocks;
+        }
+
+        await post.save();
+        await post.populate('authorId', 'login email');
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${post.topicId}`).emit('post:updated', post);
+                console.log(`Emitted post:updated for post ${post._id}`);
+            }
+        } catch (e) {
+            console.error('WebSocket error (updatePost):', e);
+        }
+
+        return res.status(200).json({message: "Zaktualizowano post", post});
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({message: "Błąd aktualizacji posta", err});
+    }
+}
+
+module.exports = {createPost, toggleLike, deletePost, updatePost};
