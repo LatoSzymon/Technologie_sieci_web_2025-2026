@@ -64,7 +64,7 @@ const submit = async () => {
     form input {
         margin-top: 10px;
         width: 60%;
-        height: 50px;
+        height: 30px;
         border: none;
         border-radius: 20px;
         padding: 1em;

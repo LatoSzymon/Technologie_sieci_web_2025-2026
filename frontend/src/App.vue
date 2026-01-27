@@ -91,6 +91,7 @@ nav {
   margin: 0;
   margin-bottom: 5vh;
   border-bottom: 2px solid #fff00033;
+  letter-spacing: 2px;
 }
 nav a {
   margin-right: 1em;
@@ -139,6 +140,10 @@ li {
   margin-right: 2vw;
   display: flex;
   align-items: center;
+}
+
+nav button {
+  margin: auto;
 }
 
 
