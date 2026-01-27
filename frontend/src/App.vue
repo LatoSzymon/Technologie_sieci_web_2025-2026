@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
       </header>
       <div class="links">
         <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
-        <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
+        <!-- <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link> -->
         <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
         <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
         <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>

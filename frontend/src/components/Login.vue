@@ -45,6 +45,32 @@ const submit = async () => {
 
 <style>
     div {
-        color: red;
+        color: inherit;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        margin: auto;
+        max-width: 50vw;
+        align-items: center;
+        justify-content: center;
+    }
+
+    form div {
+        margin-top: 10px;
+    }
+    
+    form input {
+        margin-top: 10px;
+        width: 60%;
+        height: 50px;
+        border: none;
+        border-radius: 20px;
+        padding: 1em;
+    }
+
+    button {
+        margin-top: 15px;
     }
 </style>
