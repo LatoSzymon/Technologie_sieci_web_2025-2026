@@ -195,7 +195,7 @@ const listRootTopics = async (_req, res) => {
 
 const getTopicById = async (req, res) => {
     try {
-        const id = req.params.id;
+        const id = req.params.topicId;
         const topic = await Topic.findById(id)
             .populate('ownerId', 'login mail')
             .populate('moderatorsId', 'login mail')
@@ -284,7 +284,7 @@ const buildTree = async (parentId = null) => {
             const children = await buildTree(topic._id);
 
             tree.push({
-                id: topic._id, 
+                _id: topic._id, 
                 name: topic.name, 
                 path: topic.path, 
                 children, 
@@ -345,7 +345,7 @@ const getTopicTree = async (req, res) => {
 
 const getTopicSubtree = async (req, res) => {
     try {
-        const topicId = req.params.id;
+        const topicId = req.params.topicId;
         const subtree = await buildTree(topicId);
         return res.status(200).json({tree: subtree});
     } catch (err) {
@@ -353,4 +353,203 @@ const getTopicSubtree = async (req, res) => {
     }
 }
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree };
+const updateTopic = async (req, res) => {
+    try {
+        const topicId = req.params.topicId;
+        const userId = req.user.userId;
+        const { name, description } = req.body;
+        
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+        
+        // Sprawdzenie uprawnień: moderator lub admin
+        const isModerator = topic.ownerId.equals(userId) || 
+                           topic.moderatorsId.some(id => id.equals(userId)) || 
+                           req.user.role === "admin";
+        
+        if (!isModerator) {
+            return res.status(403).json({ 
+                message: "Tylko moderator lub admin może edytować temat" 
+            });
+        }
+        
+        if (name) topic.name = name;
+        if (description !== undefined) topic.description = description;
+        
+        await topic.save();
+        
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.emit('topic:updated', { 
+                    topicId: topic._id, 
+                    action: 'updated', 
+                    topic: {
+                        _id: topic._id,
+                        name: topic.name,
+                        description: topic.description
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket error (updateTopic):', e);
+        }
+        
+        return res.status(200).json({ 
+            message: "Temat został zaktualizowany", 
+            topic 
+        });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Błąd przy aktualizacji tematu", 
+            error 
+        });
+    }
+};
+
+const promoteModerator = async (req, res) => {
+    try {
+        const { topicId, userId } = req.body;
+        const currentUserId = req.user.userId;
+        
+        if (!topicId || !userId) {
+            return res.status(400).json({ 
+                message: "topicId i userId są wymagane" 
+            });
+        }
+        
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+        
+        // Tylko właściciel tematu lub admin może promować
+        const canPromote = topic.ownerId.equals(currentUserId) || req.user.role === "admin";
+        if (!canPromote) {
+            return res.status(403).json({ 
+                message: "Tylko właściciel tematu lub admin może promować moderatora" 
+            });
+        }
+        
+        // Sprawdź czy użytkownik istnieje
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Użytkownik nie istnieje" });
+        }
+        
+        // Sprawdź czy już jest moderatorem
+        if (topic.moderatorsId.some(id => id.equals(userId))) {
+            return res.status(409).json({ 
+                message: "Ten użytkownik już jest moderatorem" 
+            });
+        }
+        
+        // Dodaj jako moderator
+        topic.moderatorsId.push(userId);
+        await topic.save();
+        
+        // Dodaj prawa do wszystkich istniejących podtematów
+        const subtopics = await getAllSubtopics(topicId);
+        if (subtopics.length > 0) {
+            await Topic.updateMany(
+                { _id: { $in: subtopics } },
+                { $addToSet: { moderatorsId: userId } }
+            );
+        }
+        
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('moderator:promoted', {
+                    topicId,
+                    message: `Zostałeś moderatorem tematu: ${topic.name}`
+                });
+                io.to(`topic:${topicId}`).emit('topic:moderatorAdded', { 
+                    userId, 
+                    topicId 
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket error (promoteModerator):', e);
+        }
+        
+        return res.status(200).json({ 
+            message: "Użytkownik został promowany na moderatora", 
+            topic 
+        });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Błąd przy promowaniu moderatora", 
+            error 
+        });
+    }
+};
+
+const removeModerator = async (req, res) => {
+    try {
+        const { topicId, userId } = req.body;
+        const currentUserId = req.user.userId;
+        
+        if (!topicId || !userId) {
+            return res.status(400).json({ 
+                message: "topicId i userId są wymagane" 
+            });
+        }
+        
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+        
+        // Sprawdzenie uprawnień: na ścieżce od root do tematu
+        const isModerator = topic.ownerId.equals(currentUserId) || 
+                           topic.moderatorsId.some(id => id.equals(currentUserId)) || 
+                           req.user.role === "admin";
+        if (!isModerator) {
+            return res.status(403).json({ 
+                message: "Brak uprawnień do usunięcia moderatora" 
+            });
+        }
+        
+        // Nie można usunąć właściciela
+        if (topic.ownerId.equals(userId)) {
+            return res.status(403).json({ 
+                message: "Nie można usunąć właściciela tematu" 
+            });
+        }
+        
+        // Usuń z tematu
+        topic.moderatorsId = topic.moderatorsId.filter(id => !id.equals(userId));
+        await topic.save();
+        
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('moderator:removed', {
+                    topicId,
+                    message: `Przestałeś być moderatorem tematu: ${topic.name}`
+                });
+                io.to(`topic:${topicId}`).emit('topic:moderatorRemoved', { 
+                    userId, 
+                    topicId 
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket error (removeModerator):', e);
+        }
+        
+        return res.status(200).json({ 
+            message: "Moderator został usunięty", 
+            topic 
+        });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Błąd przy usuwaniu moderatora", 
+            error 
+        });
+    }
+};
+
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator };

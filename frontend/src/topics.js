@@ -37,15 +37,16 @@ const useTopicsStore = defineStore("topics", () => {
 
     const fetchTopic = async (id) => {
         try {
+            if (!id || id === 'undefined') {
+                throw new Error('Invalid topic ID: ' + id);
+            }
+            
             loading.value = true;
             error.value = null;
-            console.log(`fetchuje ${id}`);
             
             const topic = await getTopicById(id);
-            console.log(topic);
-
             currentTopic.value = topic;
-            permissions.value = {}; // TODO: Oblicz permissions na podstawie topic i user
+            permissions.value = {};
         } catch (err) {
             error.value = err.message;
             console.error('Error fetching topic:', err);
