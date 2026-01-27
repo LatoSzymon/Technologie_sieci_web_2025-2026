@@ -10,7 +10,7 @@ const emit = defineEmits(['close', 'created']);
 
 const name = ref('');
 const description = ref('');
-const tags = ref(''); // comma separated
+const tags = ref('');
 const loading = ref(false);
 const error = ref('');
 
@@ -46,10 +46,10 @@ const submit = async () => {
       <input v-model="name" placeholder="Nazwa" />
       <textarea v-model="description" placeholder="Opis"></textarea>
       <input v-model="tags" placeholder="Tagi (oddzielone przecinkami)" />
-      <div style="margin-top:0.5rem;">
+      <div>
         <button :disabled="loading || !name.trim()" @click="submit">Utwórz</button>
         <button @click="$emit('close')">Zamknij</button>
-        <span v-if="error" style="color:red; margin-left:1rem;">{{ error }}</span>
+        <span v-if="error" class="error">{{ error }}</span>
       </div>
     </div>
   </div>

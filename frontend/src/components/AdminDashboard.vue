@@ -1,12 +1,22 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { listUnapprovedUsers, listBlockedUsers, listAllNonAdminUsers, approveUser, blockUser, unblockUser } from '../services/adminService';
+import { listUnapprovedUsers, listBlockedUsers, listAllNonAdminUsers, approveUser, blockUser, unblockUser, deleteUser, closeTopic, openTopic, hideTopic, unhideTopic, getStatistics } from '../services/adminService';
 import tagService from '../services/tagService';
+import * as topicService from '../services/topicService';
+import { useSocketStore } from '../stores/socket';
 import Chat from './Chat.vue';
 
 const notifications = ref([]);
+const socketStore = useSocketStore();
 const handleNotify = (e) => {
 	notifications.value.unshift({ ...(e.detail || {}), ts: new Date() });
+};
+
+const handleUsersUpdated = (data) => {
+	if (data.type === 'blocked' || data.type === 'unblocked') {
+		fetchAllUsers();
+		fetchBlocked();
+	}
 };
 
 onMounted(() => {
@@ -17,17 +27,24 @@ onMounted(() => {
 	fetchPending();
 	fetchBlocked();
 	fetchAllUsers();
+	fetchAllTopics();
 	fetchTags();
+	fetchStatistics();
+	
+	socketStore.on('admin:users-updated', handleUsersUpdated);
 });
 
 onBeforeUnmount(() => {
 	window.removeEventListener('admin-notify', handleNotify);
+	socketStore.off('admin:users-updated', handleUsersUpdated);
 });
 
 const pendingUsers = ref([]);
 const blockedUsers = ref([]);
 const allUsers = ref([]);
+const allTopics = ref([]);
 const tags = ref([]);
+const statistics = ref(null);
 const loading = ref(false);
 const error = ref('');
 const actionInfo = ref('');
@@ -68,6 +85,25 @@ const fetchTags = async () => {
 		tags.value = await tagService.getTags();
 	} catch (e) {
 		error.value = 'Błąd pobierania tagów';
+		console.error(e);
+	}
+};
+
+const fetchAllTopics = async () => {
+	try {
+		const response = await topicService.getTopicTree();
+		allTopics.value = response.topics || [];
+	} catch (e) {
+		error.value = 'Błąd pobierania tematów';
+		console.error(e);
+	}
+};
+
+const fetchStatistics = async () => {
+	try {
+		statistics.value = await getStatistics();
+	} catch (e) {
+		error.value = 'Błąd pobierania statystyk';
 		console.error(e);
 	}
 };
@@ -129,6 +165,62 @@ const unblock = async (userId) => {
 	}
 };
 
+const deleteUserAction = async (userId) => {
+	if (!confirm('Czy na pewno usunąć tego użytkownika? (Ta operacja jest nieodwracalna)')) return;
+	actionInfo.value = '';
+	try {
+		await deleteUser(userId);
+		actionInfo.value = 'Usunięto użytkownika';
+		await fetchAllUsers();
+	} catch (e) {
+		error.value = e?.response?.data?.message || 'Błąd usuwania użytkownika';
+	}
+};
+
+const closeTopicAction = async (topicId) => {
+	if (!confirm('Zamknąć ten temat?')) return;
+	try {
+		await closeTopic(topicId);
+		actionInfo.value = 'Zamknięto temat';
+		await fetchAllTopics();
+	} catch (e) {
+		error.value = e?.response?.data?.message || 'Błąd zamykania tematu';
+	}
+};
+
+const openTopicAction = async (topicId) => {
+	if (!confirm('Otworzyć ten temat?')) return;
+	try {
+		await openTopic(topicId);
+		actionInfo.value = 'Otwarty temat';
+		await fetchAllTopics();
+	} catch (e) {
+		error.value = e?.response?.data?.message || 'Błąd otwierania tematu';
+	}
+};
+
+const hideTopicAction = async (topicId) => {
+	if (!confirm('Ukryć ten temat?')) return;
+	try {
+		await hideTopic(topicId);
+		actionInfo.value = 'Ukryto temat';
+		await fetchAllTopics();
+	} catch (e) {
+		error.value = e?.response?.data?.message || 'Błąd ukrywania tematu';
+	}
+};
+
+const unhideTopicAction = async (topicId) => {
+	if (!confirm('Odkryć ten temat?')) return;
+	try {
+		await unhideTopic(topicId);
+		actionInfo.value = 'Odkryto temat';
+		await fetchAllTopics();
+	} catch (e) {
+		error.value = e?.response?.data?.message || 'Błąd odkrywania tematu';
+	}
+};
+
 onMounted(fetchPending);
 </script>
 
@@ -136,8 +228,8 @@ onMounted(fetchPending);
 	<div>
 		<h2>Panel administratora</h2>
 		<div v-if="loading">Ładowanie...</div>
-		<div v-if="error" style="color:red">{{ error }}</div>
-		<div v-if="actionInfo" style="color:green">{{ actionInfo }}</div>
+		<div v-if="error" class="error-message">{{ error }}</div>
+		<div v-if="actionInfo" class="success-message">{{ actionInfo }}</div>
 
 		<section>
 			<h3>Powiadomienia administracyjne</h3>
@@ -184,7 +276,7 @@ onMounted(fetchPending);
 			</div>
 		</section>
 
-		<section style="margin-top:1rem;">
+		<section class="section-spacing">
 			<h3>Niezaakceptowani użytkownicy</h3>
 			<div v-if="pendingUsers.length === 0"><em>Brak oczekujących.</em></div>
 			<ul>
@@ -196,7 +288,7 @@ onMounted(fetchPending);
 			</ul>
 		</section>
 
-		<section style="margin-top:1rem;">
+		<section class="section-spacing">
 			<h3>Zablokowani użytkownicy (globalnie)</h3>
 			<div v-if="blockedUsers.length === 0"><em>Brak zablokowanych.</em></div>
 			<ul>
@@ -207,7 +299,7 @@ onMounted(fetchPending);
 			</ul>
 		</section>
 
-		<section style="margin-top:1rem;">
+		<section class="section-spacing">
 			<h3>Zarządzanie użytkownikami</h3>
 			<div v-if="allUsers.length === 0"><em>Brak użytkowników.</em></div>
 			<div v-else class="users-management">
@@ -238,6 +330,12 @@ onMounted(fetchPending);
 								>
 									Odblokuj
 								</button>
+								<button 
+									@click="deleteUserAction(u._id)"
+									title="Usuń użytkownika"
+								>
+									Usuń
+								</button>
 							</div>
 						</div>
 					</div>
@@ -245,7 +343,108 @@ onMounted(fetchPending);
 			</div>
 		</section>
 
-		<section style="margin-top:2rem;">
+		<section>
+			<h3>Zarządzanie tematami</h3>
+			<div v-if="allTopics.length === 0"><em>Brak tematów.</em></div>
+			<div v-else>
+				<div v-for="topic in allTopics" :key="topic._id">
+					<div>
+						<div>
+							<strong>{{ topic.name }}</strong>
+						<span v-if="topic.isClosed" class="badge-closed">Zamknięty</span>
+						<span v-if="topic.isHidden" class="badge-hidden">Ukryty</span>
+						</div>
+						<div>
+							<button 
+								v-if="!topic.isClosed"
+								@click="closeTopicAction(topic._id)"
+								title="Zamknij temat"
+							>
+							Zamknijs
+							</button>
+							<button 
+								v-else
+								@click="openTopicAction(topic._id)"
+								class="btn-open-topic"
+								title="Otwórz temat"
+							>
+								🔓
+							</button>
+							<button 
+								v-if="!topic.isHidden"
+								@click="hideTopicAction(topic._id)"
+								class="btn-hide-topic"
+								title="Ukryj temat"
+							>
+								👁️‍🗨️
+							</button>
+							<button 
+								v-else
+								@click="unhideTopicAction(topic._id)"
+								class="btn-unhide-topic"
+								title="Odkryj temat"
+							>
+								👀
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="section-spacing">
+			<h3>Statystyki</h3>
+			<div v-if="!statistics" class="loading-text">Ładowanie statystyk...</div>
+			<div v-else>
+				<div class="stats-grid">
+					<div class="stat-card stat-users-total">
+						<div class="stat-value">{{ statistics.users.total }}</div>
+						<div class="stat-label">Użytkowników</div>
+					</div>
+					<div class="stat-card stat-users-approved">
+						<div class="stat-value">{{ statistics.users.approved }}</div>
+						<div class="stat-label">Zaakceptowanych</div>
+					</div>
+					<div class="stat-card stat-users-pending">
+						<div class="stat-value">{{ statistics.users.pending }}</div>
+						<div class="stat-label">Oczekujących</div>
+					</div>
+					<div class="stat-card stat-users-blocked">
+						<div class="stat-value">{{ statistics.users.blocked }}</div>
+						<div class="stat-label">Zablokowanych</div>
+					</div>
+					<div class="stat-card stat-topics">
+						<div class="stat-value">{{ statistics.topics.total }}</div>
+						<div class="stat-label">Tematów</div>
+					</div>
+					<div class="stat-card stat-posts">
+						<div class="stat-value">{{ statistics.posts.total }}</div>
+						<div class="stat-label">Postów</div>
+					</div>
+				</div>
+
+				<div v-if="statistics.posts.topPostsByLikes && statistics.posts.topPostsByLikes.length" class="top-posts-section">
+					<h4>Top posty (po likach)</h4>
+					<ul class="posts-list">
+						<li v-for="(post, idx) in statistics.posts.topPostsByLikes" :key="idx" class="post-item">
+							<small class="post-meta">{{ post.author }} • {{ post.likes }} ❤️</small><br/>
+							{{ post.content }}
+						</li>
+					</ul>
+				</div>
+
+				<div v-if="statistics.analytics && statistics.analytics.usersByRole && statistics.analytics.usersByRole.length" class="roles-section">
+					<h4>Użytkownicy po rolach</h4>
+					<div class="roles-grid">
+						<div v-for="role in statistics.analytics.usersByRole" :key="role._id" class="role-card">
+							<strong>{{ role._id || 'user' }}</strong>: {{ role.count }}
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="chat-section">
 			<h3>Chat z użytkownikami</h3>
 			<Chat />
 		</section>

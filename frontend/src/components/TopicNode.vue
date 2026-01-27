@@ -4,7 +4,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["select"]);
 const selectNode = () => {
-  emit("select", props.node.id);
+  emit("select", props.node._id);
 };
 
 const getTagName = (tag) => {
@@ -26,7 +26,7 @@ const getTagName = (tag) => {
     <div v-if="node.children && node.children.length" class="topic-children">
       <TopicNode
         v-for="child in node.children"
-        :key="child.id"
+        :key="child._id"
         :node="child"
         @select="$emit('select', $event)"
       />

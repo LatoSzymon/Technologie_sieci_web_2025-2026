@@ -10,7 +10,9 @@ import { useRouter } from 'vue-router';
 import tagService from '../services/tagService';
 
 const topics = useTopicsStore();
-const tree = computed(() => topics.tree);
+const tree = computed(() => {
+    return topics.tree;
+});
 const router = useRouter();
 
 const showCreateModal = ref(false);
@@ -59,15 +61,15 @@ onMounted(async () => {
 
 <template>
     <div>
-        <div style="margin-bottom:1em;">
-            <input v-model="search" placeholder="Szukaj tematu..." style="margin-right:1em;" />
-            <select v-model="tagFilter">
+        <div class="search-section">
+            <input v-model="search" placeholder="Szukaj tematu..." class="search-input" />
+            <select v-model="tagFilter" class="tag-filter">
                 <option value="">Wszystkie tagi</option>
                 <option v-for="tag in allTags" :key="tag._id" :value="tag._id">{{ tag.name }}</option>
             </select>
         </div>
         <button @click="showCreateModal = true">Utwórz nowy temat</button>
         <CreateTopicModal :show="showCreateModal" @close="showCreateModal = false" @created="handleCreated" />
-        <TopicNode v-for="node in filteredTree" :key="node.id" :node="node" @select="onSelect"/>
+        <TopicNode v-for="node in filteredTree" :key="node._id" :node="node" @select="onSelect"/>
     </div>
 </template>

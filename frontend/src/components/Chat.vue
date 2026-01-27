@@ -52,17 +52,17 @@ const send = () => {
 
 <template>
 	<div>
-		<div style="margin-bottom:1rem;">
+		<div class="chat-controls">
 			<div v-if="isAdmin">
-				<select v-model="toUserId">
+				<select v-model="toUserId" class="user-select">
 					<option value="">Wybierz użytkownika</option>
 					<option v-for="u in users" :key="u._id || u.id" :value="u._id || u.id">
 						{{ u.login || u.email || u._id || u.id }}
 					</option>
 				</select>
 			</div>
-			<input v-model="newMessage" placeholder="Wiadomość" style="width:60%" />
-			<button @click="send">Wyślij</button>
+			<input v-model="newMessage" placeholder="Wiadomość" class="message-input" />
+			<button @click="send" class="send-button">Wyślij</button>
 		</div>
 
 		<ul>
