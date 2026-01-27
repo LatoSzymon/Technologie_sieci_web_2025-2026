@@ -44,49 +44,70 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <nav>
-    <header>
-      <h1>ProgTalk</h1>
-      <span>Bo Reddit jest nudny</span>
-    </header>
-    <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
-    <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
-    <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
-    <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
-    <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
-    <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
-    <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
-  </nav>
-  <Notifications />
-  <main>
-    <router-view />
-  </main>
-  <footer>
-    <ul>
-      Specjalne podziękowania dla wszystkich podmiotów, które wspierają rozwój ProgTalk:
-      <li>UG</li>
-      <li>"Biały Kot" - kocia kawiarnia</li>
-      <li>Pizza Donatello</li>
-
-    </ul>
-  </footer>
+  <div id="app-layout">
+    <nav>
+      <header>
+        <h1>ProgTalk</h1>
+        <span>Bo Reddit jest nudny</span>
+      </header>
+      <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
+      <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
+      <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
+      <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
+      <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
+      <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
+      <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
+    </nav>
+    <Notifications />
+    <main>
+      <router-view />
+    </main>
+    <footer>
+      <ul>
+        Specjalne podziękowania dla wszystkich podmiotów, które wspierają rozwój ProgTalk:
+        <li>UG</li>
+        <li>"Biały Kot" - kocia kawiarnia</li>
+        <li>Pizza Donatello</li>
+      </ul>
+    </footer>
+  </div>
 </template>
 
 <style scoped>
-  nav {
-    background: #061b82;
-    padding: 1em;
-    margin-bottom: 2em;
-  }
-  nav a {
-    margin-right: 1em;
-    text-decoration: none;
-    color: #dfecd0;
-  }
-  footer {
-    margin-top: 2em;
-    padding: 1em;
-    background: #061b82;
-    text-align: center;
-  }
+#app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+nav {
+  background: #037e2a;
+  padding: 1em;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0;
+  margin-bottom: 5vh;
+  border-bottom: 2px solid #fff00033;
+}
+nav a {
+  margin-right: 1em;
+  text-decoration: none;
+}
+nav h1 {
+  margin: 0;
+}
+main {
+  flex: 1 0 auto;
+}
+footer {
+  margin: 0;
+  padding: 1em;
+  background: #037e2a;
+  text-align: center;
+  border-top: 2px solid #fff00033;
+  flex-shrink: 0;
+}
 </style>
