@@ -48,15 +48,17 @@ onBeforeUnmount(() => {
     <nav>
       <header>
         <h1>ProgTalk</h1>
-        <span>Bo Reddit jest nudny</span>
+        <span>Bo Reddit nam nie wystarczy</span>
       </header>
-      <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
-      <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
-      <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
-      <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
-      <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
-      <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
-      <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
+      <div class="links">
+        <router-link to="/topics" v-if="auth.isLoggedIn">Tematy</router-link>
+        <router-link to="/home" v-if="auth.isLoggedIn">Home</router-link>
+        <router-link to="/profile" v-if="auth.isLoggedIn">Profil</router-link>
+        <router-link v-if="auth.isAdmin" to="/admin">Panel admina</router-link>
+        <router-link v-if="!auth.isLoggedIn" to="/login">Logowanie</router-link>
+        <router-link v-if="!auth.isLoggedIn" to="/register">Rejestracja</router-link>
+        <button v-if="auth.isLoggedIn" @click="handleLogout">Wyloguj</button>
+      </div>
     </nav>
     <Notifications />
     <main>
@@ -85,9 +87,7 @@ nav {
   display: flex;
   align-items: center;
   width: 100%;
-  position: sticky;
   top: 0;
-  z-index: 10;
   margin: 0;
   margin-bottom: 5vh;
   border-bottom: 2px solid #fff00033;
@@ -99,6 +99,15 @@ nav a {
 nav h1 {
   margin: 0;
 }
+
+ul {
+  list-style: none;
+  width: 40%;
+}
+
+nav span {
+  font-size: 70%;
+}
 main {
   flex: 1 0 auto;
 }
@@ -108,6 +117,29 @@ footer {
   background: #037e2a;
   text-align: center;
   border-top: 2px solid #fff00033;
-  flex-shrink: 0;
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60%;
 }
+
+ul {
+  font-size: 120%;
+}
+
+
+li {
+  color: whitesmoke;
+  font-size: 60%;
+}
+
+.links {
+  margin-left: auto;
+  margin-right: 2vw;
+  display: flex;
+  align-items: center;
+}
+
+
 </style>
