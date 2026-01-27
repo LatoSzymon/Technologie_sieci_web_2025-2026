@@ -6,6 +6,9 @@ import { authStore } from '../auth';
 import PostList from './PostList.vue';
 import BlockUserModal from './moderation/BlockUserModal.vue';
 import CreateSubtopicModal from './moderation/CreateSubtopicModal.vue';
+import PromoteModeratorModal from './moderation/PromoteModeratorModal.vue';
+import RemoveModeratorModal from './moderation/RemoveModeratorModal.vue';
+import * as topicService from '../services/topicService';
 
 const route = useRoute();
 const topics = useTopicsStore();
@@ -13,7 +16,7 @@ const auth = authStore();
 
 const loadTopic = () => {
 	const id = route.params.id;
-	if (id) {
+	if (id && id !== 'undefined') {
 		topics.fetchTopic(id);
 	}
 };
@@ -75,32 +78,93 @@ const canModerate = computed(() => {
 
 const showBlockModal = ref(false);
 const showCreateSubtopic = ref(false);
+const showPromoteModal = ref(false);
+const showRemoveModal = ref(false);
+const removeModeratorId = ref('');
+const removeModeratorLogin = ref('');
+const isEditingTopic = ref(false);
+const editForm = ref({ name: '', description: '' });
+const editError = ref('');
 
 const handleBlocked = () => {
 	topics.fetchTopic(route.params.id);
 };
+
 const handleCreated = () => {
 	topics.fetchTopic(route.params.id);
 };
+
+const handlePromoted = () => {
+	topics.fetchTopic(route.params.id);
+};
+
+const openRemoveModal = (moderator) => {
+	removeModeratorId.value = typeof moderator === 'object' ? moderator._id : moderator;
+	removeModeratorLogin.value = typeof moderator === 'object' ? moderator.login : 'nieznany';
+	showRemoveModal.value = true;
+};
+
+const handleRemoved = () => {
+	topics.fetchTopic(route.params.id);
+};
+
+const initEditForm = () => {
+	editForm.value = {
+		name: topics.currentTopic?.name || '',
+		description: topics.currentTopic?.description || ''
+	};
+};
+
+const saveTopic = async () => {
+	try {
+		editError.value = '';
+		if (!editForm.value.name.trim()) {
+			editError.value = 'Nazwa tematu nie może być pusta';
+			return;
+		}
+		await topicService.updateTopic(topics.currentTopic._id, editForm.value);
+		await topics.fetchTopic(topics.currentTopic._id);
+		isEditingTopic.value = false;
+	} catch (e) {
+		editError.value = e?.response?.data?.message || 'Błąd';
+	}
+};
+
+const cancelEdit = () => {
+	isEditingTopic.value = false;
+	initEditForm();
+};
+
+watch(() => topics.currentTopic, () => {
+	initEditForm();
+});
 </script>
 
 <template>
-	<div v-if="isBlocked" style="padding: 2rem; background: #ffe6e6; border: 2px solid red; border-radius: 4px;">
-		<h2 style="color: red;">Zostałeś zablokowany</h2>
+	<div v-if="isBlocked" class="blocked-alert">
+		<h2 class="blocked-heading">Zostałeś zablokowany</h2>
 		<p>Nie możesz publikować postów w tym temacie, ponieważ moderator Cię zablokował.</p>
 	</div>
 	<div v-else-if="topics.loading">Ładowanie...</div>
 	<div v-else-if="topics.error">Błąd: {{ topics.error }}</div>
 	<div v-else-if="isBanned">
-		<div style="color: red; font-weight: bold;">Nie masz dostępu do tego tematu (zostałeś zbanowany).</div>
+		<div class="banned-message">Nie masz dostępu do tego tematu (zostałeś zbanowany).</div>
 	</div>
 	<div v-else-if="topics.currentTopic">
-		<h2>{{ topics.currentTopic.name }}</h2>
+		<h2 class="topic-heading">
+			{{ topics.currentTopic.name }}
+			<span v-if="topics.currentTopic.isClosed" class="badge-closed">
+				🔒 Zamknięty
+			</span>
+			<span v-if="topics.currentTopic.isHidden" class="badge-hidden">
+				👁️ Ukryty
+			</span>
+		</h2>
 		<p>{{ topics.currentTopic.description }}</p>
 		<div v-if="topics.currentTopic.tags && topics.currentTopic.tags.length">
 			<span v-for="tag in topics.currentTopic.tags" :key="tag">{{ tag }}</span>
 		</div>
-		<div v-if="topics.currentTopic.isClosed" style="color: red;">(Temat zamknięty)</div>
+		<div v-if="topics.currentTopic.isClosed" class="topic-closed-notice">(Temat zamknięty)</div>
 		<div v-if="topics.currentTopic.children && topics.currentTopic.children.length">
 			<h3>Podtematy:</h3>
 			<ul>
@@ -113,27 +177,90 @@ const handleCreated = () => {
 			<small>Właściciel: {{ topics.currentTopic.ownerId.login }}</small>
 		</div>
 		<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length">
-			<small>Moderatorzy: <span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id">{{ mod.login }}</span></small>
+			<small>Moderatorzy: 
+				<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-item">
+					{{ mod.login }}
+					<button 
+						v-if="canModerate"
+						@click="openRemoveModal(mod)" 
+						class="btn-remove-moderator"
+					>
+						Usuń
+					</button>
+				</span>
+			</small>
 		</div>
 
-				<div v-if="canModerate" style="margin: 1rem 0; border-top: 1px solid #eee; padding-top: 1rem;">
-						<h3>Moderacja</h3>
-						<button @click="showBlockModal = true">Blokuj/Odblokuj użytkownika</button>
-						<button style="margin-left:0.5rem" @click="showCreateSubtopic = true">Utwórz podtemat</button>
+		<div v-if="canModerate" class="moderation-section">
+			<h3>Moderacja</h3>
+			
+			<div class="moderation-controls">
+				<button v-if="!isEditingTopic" @click="isEditingTopic = true" class="btn-edit-topic">
+					Edytuj temat
+				</button>
+				
+				<div v-if="isEditingTopic" class="edit-topic-form">
+					<div class="form-group">
+						<label class="form-label">
+							Nazwa:
+							<input v-model="editForm.name" type="text" class="form-input" />
+						</label>
+					</div>
+					<div class="form-group">
+						<label class="form-label">
+							Opis:
+							<textarea v-model="editForm.description" class="textarea-description"></textarea>
+						</label>
+					</div>
+					<div v-if="editError" class="error-message">
+						{{ editError }}
+					</div>
+					<button @click="saveTopic" class="btn-save">
+						Zapisz
+					</button>
+					<button @click="cancelEdit" class="btn-cancel">
+						Anuluj
+					</button>
 				</div>
+			</div>
+			
+			<button @click="showBlockModal = true" class="btn-block-user">
+				Blokuj/Odblokuj użytkownika
+			</button>
+			<button @click="showPromoteModal = true" class="btn-promote-moderator">
+				Promuj moderatora
+			</button>
+			<button @click="showCreateSubtopic = true" class="btn-create-subtopic">
+				Utwórz podtemat
+			</button>
+		</div>
 
-				<BlockUserModal 
-					:open="showBlockModal" 
-					:topic-id="topics.currentTopic._id" 
-					@close="showBlockModal = false" 
-					@blocked="handleBlocked" 
-					@unblocked="handleBlocked" />
+		<BlockUserModal 
+			:open="showBlockModal" 
+			:topic-id="topics.currentTopic._id" 
+			@close="showBlockModal = false" 
+			@blocked="handleBlocked" 
+			@unblocked="handleBlocked" />
 
-				<CreateSubtopicModal 
-					:open="showCreateSubtopic" 
-					:parent-id="topics.currentTopic._id" 
-					@close="showCreateSubtopic = false" 
-					@created="handleCreated" />
+		<PromoteModeratorModal 
+			:open="showPromoteModal" 
+			:topic-id="topics.currentTopic._id" 
+			@close="showPromoteModal = false" 
+			@promoted="handlePromoted" />
+
+		<RemoveModeratorModal 
+			:open="showRemoveModal" 
+			:topic-id="topics.currentTopic._id"
+			:moderator-id="removeModeratorId"
+			:moderator-login="removeModeratorLogin"
+			@close="showRemoveModal = false" 
+			@removed="handleRemoved" />
+
+		<CreateSubtopicModal 
+			:open="showCreateSubtopic" 
+			:parent-id="topics.currentTopic._id" 
+			@close="showCreateSubtopic = false" 
+			@created="handleCreated" />
 
         <div>
             <h3>Dyskusja</h3>

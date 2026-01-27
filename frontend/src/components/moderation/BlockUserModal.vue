@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { blockUserInTopic, unblockUserInTopic, getTopicSubtree } from '../../services/topicService';
+import api from '../../services/api';
 
 const props = defineProps({
   topicId: { type: String, required: true },
@@ -11,15 +12,23 @@ const emit = defineEmits(['close', 'blocked', 'unblocked']);
 const userId = ref('');
 const loading = ref(false);
 const error = ref('');
-const mode = ref('block'); // 'block' or 'unblock'
+const mode = ref('block');
 const topicTree = ref(null);
-const selectedExceptions = ref(new Set()); // Topic IDs where user CAN post (whitelist)
+const selectedExceptions = ref(new Set());
+const allUsers = ref([]);
+const searchQuery = ref('');
+const searchInputFocused = ref(false);
 
 onMounted(async () => {
   try {
-    topicTree.value = await getTopicSubtree(props.topicId);
+    const treeData = await getTopicSubtree(props.topicId);
+    console.log('Pobrane drzewo podtematów:', treeData);
+    topicTree.value = treeData;
+    const response = await api.get('/admin/all-users');
+    allUsers.value = response.data.users || [];
+    console.log('Pobrani użytkownicy:', allUsers.value.length);
   } catch (e) {
-    console.error('Błąd pobierania drzewa tematów:', e);
+    console.error('Błąd pobierania danych:', e);
   }
 });
 
@@ -35,9 +44,19 @@ const flattenTree = (node, flat = []) => {
 };
 
 const subtopics = computed(() => {
-  if (!topicTree.value) return [];
+  if (!topicTree.value) {
+    console.log('topicTree.value jest nullowy/undefined');
+    return [];
+  }
   const all = flattenTree(topicTree.value);
+  console.log('Spłaszczone drzewo:', all.length, 'elementów, podtematy:', all.length - 1);
   return all.slice(1);
+});
+
+const filteredUsers = computed(() => {
+  if (!searchQuery.value.trim()) return [];
+  const query = searchQuery.value.toLowerCase();
+  return allUsers.value.filter(u => u.login.toLowerCase().includes(query)).slice(0, 10);
 });
 
 const toggleException = (topicId) => {
@@ -57,6 +76,7 @@ const blockUser = async () => {
     await blockUserInTopic({ topicId: props.topicId, userId: userId.value, exceptTopicIds: exceptions });
     emit('blocked', userId.value);
     userId.value = '';
+    searchQuery.value = '';
     selectedExceptions.value.clear();
     mode.value = 'block';
     emit('close');
@@ -75,6 +95,7 @@ const unblockUser = async () => {
     await unblockUserInTopic({ topicId: props.topicId, userId: userId.value });
     emit('unblocked', userId.value);
     userId.value = '';
+    searchQuery.value = '';
     selectedExceptions.value.clear();
     mode.value = 'block';
     emit('close');
@@ -84,6 +105,11 @@ const unblockUser = async () => {
     loading.value = false;
   }
 };
+
+const selectUser = (user) => {
+  userId.value = user._id;
+  searchQuery.value = '';
+};
 </script>
 
 <template>
@@ -92,7 +118,43 @@ const unblockUser = async () => {
       <h3>Zarządzaj blokami użytkownika</h3>
       <div class="modal-body">
         <div class="input-section">
-          <input v-model="userId" placeholder="ID użytkownika" class="user-input" />
+          <label>
+            <strong>Wyszukaj użytkownika:</strong>
+          </label>
+          <div class="search-wrapper">
+            <input 
+              v-model="searchQuery" 
+              @focus="searchInputFocused = true"
+              @blur="searchInputFocused = false"
+              placeholder="Wpisz login użytkownika..." 
+              class="user-input" 
+            />
+            <div v-if="searchInputFocused && (filteredUsers.length > 0 || searchQuery.trim())">
+              <div v-if="filteredUsers.length === 0 && searchQuery.trim()">
+                Brak użytkowników pasujących do "<strong>{{ searchQuery }}</strong>"
+              </div>
+              <div 
+                v-for="user in filteredUsers"
+                :key="user._id"
+                @click="selectUser(user)"
+                @mousedown.prevent="selectUser(user)"
+              >
+                <strong>{{ user.login }}</strong>
+                <small>{{ user.email }}</small>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="userId">
+            <strong>Wybrany użytkownik:</strong> {{ userId }}
+            <button 
+              type="button"
+              @click="userId = ''"
+            >
+              ✕
+            </button>
+          </div>
+          
           <div class="button-group">
             <button 
               :disabled="loading || !userId" 
@@ -128,12 +190,10 @@ const unblockUser = async () => {
           </div>
         </div>
 
-        <!-- Error message -->
         <div v-if="error" class="error-message">
           {{ error }}
         </div>
 
-        <!-- Action buttons -->
         <div class="action-buttons">
           <button 
             v-if="mode === 'block'"
