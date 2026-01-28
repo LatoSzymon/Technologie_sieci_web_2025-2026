@@ -322,6 +322,11 @@ const toggleLike = async () => {
 </template>
 
 <style scoped>
+
+.btn-like {
+  font-size: large;
+}
+
 .post {
   border: 1px solid #44ff00;
   padding: 1rem;

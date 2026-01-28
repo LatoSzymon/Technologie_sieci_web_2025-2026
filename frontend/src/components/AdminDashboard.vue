@@ -290,8 +290,8 @@ onMounted(fetchPending);
 						<small class="user-email">{{ u.mail }}</small>
 					</div>
 					<div class="user-card-actions">
-						<button @click="approve(u._id)" class="btn btn-success">✓ Akceptuj</button>
-						<button @click="block(u._id)" class="btn btn-danger">✗ Zablokuj</button>
+						<button @click="approve(u._id)" class="btn btn-success">Akceptuj</button>
+						<button @click="block(u._id)" class="btn btn-danger">Zablokuj</button>
 					</div>
 				</div>
 			</div>
