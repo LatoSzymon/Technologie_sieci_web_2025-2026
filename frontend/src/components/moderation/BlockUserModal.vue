@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { blockUserInTopic, unblockUserInTopic, getTopicSubtree } from '../../services/topicService';
 import api from '../../services/api';
 
@@ -19,7 +19,12 @@ const allUsers = ref([]);
 const searchQuery = ref('');
 const searchInputFocused = ref(false);
 
-onMounted(async () => {
+const loadTopicData = async () => {
+  if (!props.topicId) {
+    console.log('topicId nie został jeszcze ustawiony');
+    return;
+  }
+  
   try {
     const treeData = await getTopicSubtree(props.topicId);
     console.log('Pobrane drzewo podtematów:', treeData);
@@ -29,6 +34,19 @@ onMounted(async () => {
     console.log('Pobrani użytkownicy:', allUsers.value.length);
   } catch (e) {
     console.error('Błąd pobierania danych:', e);
+    error.value = 'Błąd pobierania danych tematu';
+  }
+};
+
+onMounted(async () => {
+  await loadTopicData();
+});
+
+watch(() => props.topicId, async (newTopicId) => {
+  if (newTopicId) {
+    topicTree.value = null;
+    selectedExceptions.value.clear();
+    await loadTopicData();
   }
 });
 
@@ -224,7 +242,7 @@ const selectUser = (user) => {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,73 +250,135 @@ const selectUser = (user) => {
 }
 
 .modal-content {
-  background: #fff;
-  padding: 2rem;
+  background-color: #000000;
+  border: 2px solid rgb(238, 255, 0);
+  padding: 25px;
   border-radius: 8px;
-  min-width: 400px;
+  min-width: 420px;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 h3 {
   margin-top: 0;
-  margin-bottom: 1.5rem;
-  color: #333;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 0.5rem;
+  margin-bottom: 20px;
+  color: rgb(238, 255, 0);
+  border-bottom: 2px solid rgb(238, 255, 0);
+  padding-bottom: 10px;
+  font-size: 1.3em;
 }
 
 .modal-body {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 18px;
 }
 
 .input-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
+}
+
+.input-section label {
+  color: rgb(238, 255, 0);
+  font-weight: 600;
+}
+
+.search-wrapper {
+  position: relative;
 }
 
 .user-input {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 10px 15px;
+  border: 2px solid rgb(238, 255, 0);
+  border-radius: 6px;
+  font-size: 1em;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgb(238, 255, 0);
+  font-family: inherit;
+  transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .user-input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: rgb(247, 255, 138);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.user-input::placeholder {
+  color: rgba(238, 255, 0, 0.5);
+}
+
+.search-wrapper > div {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #000000;
+  border: 1px solid rgb(238, 255, 0);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1001;
+}
+
+.search-wrapper > div > div {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(238, 255, 0, 0.2);
+  color: rgb(238, 255, 0);
+}
+
+.search-wrapper > div > div:hover {
+  background-color: rgba(238, 255, 0, 0.1);
+}
+
+.search-wrapper > div > div strong {
+  color: rgb(247, 255, 138);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.search-wrapper > div > div small {
+  color: rgba(238, 255, 0, 0.6);
+  font-size: 0.85em;
 }
 
 .button-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .button-group button {
   flex: 1;
-  padding: 0.75rem;
-  border: 2px solid #ddd;
-  background: #f8f9fa;
-  border-radius: 4px;
+  padding: 10px 15px;
+  border: 2px solid rgb(238, 255, 0);
+  background-color: transparent;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  color: rgb(238, 255, 0);
   transition: all 0.3s ease;
+  text-transform: uppercase;
+  font-size: 0.9em;
+  font-family: inherit;
 }
 
-.button-group button:hover {
-  border-color: #007bff;
-  background: #e7f1ff;
+.button-group button:hover:not(:disabled) {
+  background-color: rgba(74, 222, 128, 0.1);
+  border-color: #4ade80;
+  color: #4ade80;
 }
 
 .button-group button.active {
-  border-color: #007bff;
-  background: #007bff;
-  color: #fff;
+  border-color: #4ade80;
+  background-color: #4ade80;
+  color: #000000;
 }
 
 .button-group button:disabled {
@@ -307,29 +387,30 @@ h3 {
 }
 
 .exceptions-section {
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 4px;
+  padding: 15px;
+  background-color: rgba(238, 255, 0, 0.05);
+  border: 1px solid rgba(238, 255, 0, 0.2);
+  border-radius: 6px;
 }
 
 .section-title {
-  margin: 0 0 1rem 0;
+  margin: 0 0 12px 0;
   font-weight: 600;
-  color: #333;
+  color: rgb(238, 255, 0);
   font-size: 0.95rem;
 }
 
 .no-subtopics {
-  padding: 1rem;
+  padding: 15px;
   text-align: center;
-  color: #666;
+  color: rgba(238, 255, 0, 0.6);
   font-style: italic;
 }
 
 .subtopics-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 4px;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -337,63 +418,71 @@ h3 {
 .topic-checkbox {
   display: flex;
   align-items: center;
-  padding: 0.5rem;
+  padding: 6px 8px;
   cursor: pointer;
   border-radius: 4px;
-  transition: background 0.2s;
+  color: rgb(238, 255, 0);
+  transition: all 0.2s ease;
+  font-size: 0.9em;
 }
 
 .topic-checkbox:hover {
-  background: rgba(0, 123, 255, 0.1);
+  background-color: rgba(74, 222, 128, 0.15);
 }
 
 .topic-checkbox input {
   cursor: pointer;
-  margin-right: 0.75rem;
-  width: 18px;
-  height: 18px;
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  accent-color: #4ade80;
+  flex-shrink: 0;
 }
 
 .topic-name {
   flex: 1;
-  color: #333;
+  color: rgb(238, 255, 0);
 }
 
 .error-message {
-  padding: 0.75rem;
-  background: #ffe6e6;
-  border-left: 4px solid #dc3545;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.2);
+  border-left: 4px solid #ef4444;
   border-radius: 4px;
-  color: #721c24;
+  color: #fca5a5;
   font-size: 0.9rem;
 }
 
 .action-buttons {
   display: flex;
-  gap: 0.75rem;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .btn-primary,
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
+  padding: 10px 16px;
+  border: 2px solid rgb(238, 255, 0);
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.95rem;
+  text-transform: uppercase;
+  font-family: inherit;
 }
 
 .btn-primary {
   flex: 1;
-  background: #007bff;
-  color: #fff;
+  background-color: #4ade80;
+  color: #000000;
+  border-color: #4ade80;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  background-color: #22c55e;
+  border-color: #22c55e;
+  transform: scale(1.05);
 }
 
 .btn-primary:disabled {
@@ -402,12 +491,14 @@ h3 {
 }
 
 .btn-secondary {
-  flex: 0.5;
-  background: #e9ecef;
-  color: #333;
+  flex: 0.7;
+  background-color: transparent;
+  color: rgb(238, 255, 0);
+  border-color: rgb(238, 255, 0);
 }
 
 .btn-secondary:hover {
-  background: #dee2e6;
+  background-color: rgba(238, 255, 0, 0.1);
+  border-color: rgb(238, 255, 0);
 }
 </style>
