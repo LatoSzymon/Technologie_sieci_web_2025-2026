@@ -15,6 +15,11 @@ const getTopicSubtree = async (id) => {
     return res.data.tree;
 };
 
+const getTopicUsers = async (id) => {
+    const res = await api.get(`/topics/${id}/users`);
+    return res.data.users;
+};
+
 const blockUserInTopic = async ({ topicId, userId, exceptTopicIds = [] }) => {
     const res = await api.post('/topics/block-user', { topicId, userId, exceptTopicIds });
     return res.data;
@@ -50,4 +55,4 @@ const removeModerator = async (topicId, userId) => {
     return res.data;
 };
 
-export {getTopicById, getTopicTree, getTopicSubtree, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
+export {getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};

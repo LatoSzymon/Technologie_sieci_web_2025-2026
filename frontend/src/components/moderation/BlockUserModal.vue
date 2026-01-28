@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { blockUserInTopic, unblockUserInTopic, getTopicSubtree } from '../../services/topicService';
-import api from '../../services/api';
+import { blockUserInTopic, unblockUserInTopic, getTopicSubtree, getTopicUsers } from '../../services/topicService';
 
 const props = defineProps({
   topicId: { type: String, required: true },
@@ -29,8 +28,8 @@ const loadTopicData = async () => {
     const treeData = await getTopicSubtree(props.topicId);
     console.log('Pobrane drzewo podtematów:', treeData);
     topicTree.value = treeData;
-    const response = await api.get('/admin/all-users');
-    allUsers.value = response.data.users || [];
+    const users = await getTopicUsers(props.topicId);
+    allUsers.value = users || [];
     console.log('Pobrani użytkownicy:', allUsers.value.length);
   } catch (e) {
     console.error('Błąd pobierania danych:', e);
@@ -39,7 +38,9 @@ const loadTopicData = async () => {
 };
 
 onMounted(async () => {
-  await loadTopicData();
+  if (props.topicId) {
+    await loadTopicData();
+  }
 });
 
 watch(() => props.topicId, async (newTopicId) => {
@@ -47,6 +48,9 @@ watch(() => props.topicId, async (newTopicId) => {
     topicTree.value = null;
     selectedExceptions.value.clear();
     await loadTopicData();
+  } else {
+    topicTree.value = null;
+    selectedExceptions.value.clear();
   }
 });
 
