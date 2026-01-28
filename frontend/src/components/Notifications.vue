@@ -2,7 +2,7 @@
   <div v-if="notifications.length" class="notifications">
     <div v-for="(n, i) in notifications" :key="i" class="notification" :class="n.type || 'info'">
       <span>{{ n.message }}</span>
-      <button @click="remove(i)">×</button>
+      <button @click="remove(i)" class="close-notification">X</button>
     </div>
   </div>
 </template>
@@ -33,5 +33,69 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.notifications {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 450px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  background-color: rgba(238, 255, 0, 0.05);
+  border-left-color: rgb(238, 255, 0);
+  color: rgb(238, 255, 0);
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.notification.success {
+  background-color: rgba(74, 222, 128, 0.1);
+  border-left-color: #4ade80;
+  color: #86efac;
+}
+
+.notification.error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-left-color: #ef4444;
+  color: #fca5a5;
+}
+
+.notification.warning {
+  background-color: rgba(249, 115, 22, 0.1);
+  border-left-color: #f97316;
+  color: #fed7aa;
+}
+
+.close-notification {
+  flex-shrink: 0;
+  background-color: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 1em;
+}
+
+.close-notification:hover {
+  background-color: currentColor;
+  color: #000000;
+}
 
 </style>

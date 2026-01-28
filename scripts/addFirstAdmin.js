@@ -21,7 +21,7 @@ const plantAnAdmin = async () => {
 
         const hash = await bcrypt.hash('adminnimda', 12);
         const admin = new User({
-            mail: "admin@first.pl",
+            mail: "admin@first2.pl",
             login: 'adminek',
             hash,
             role: 'admin',
