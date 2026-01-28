@@ -39,8 +39,8 @@ const submit = async () => {
         <div v-if="error">{{ error }}</div>
         <input v-model="loginOrEmail" type="text" placeholder="Login albo email" required />
         <input v-model="password" type="password" placeholder="Hasło" required />
-        <button :disabled="loading">Zaloguj</button>
-  </form>
+        <button :disabled="loading" class="login-btn">Zaloguj</button>
+    </form>
 </template>
 
 <style>
@@ -68,6 +68,11 @@ const submit = async () => {
         border: none;
         border-radius: 20px;
         padding: 1em;
+    }
+
+    .login-btn {
+        margin-top:15px;
+        background-color: yellow;
     }
 
 </style>

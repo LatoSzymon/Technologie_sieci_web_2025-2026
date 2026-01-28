@@ -43,6 +43,13 @@
         <input type="text" v-model="login" placeholder="Login" required>
         <input type="password" v-model="password" placeholder="Hasło" required>
         <input type="password" v-model="confirmPassword" placeholder="Powtórz hasło" required>
-        <button :disabled="loading">Zarejestruj</button>
+        <button :disabled="loading" class="reg-btn">Zarejestruj</button>
     </form>
 </template>
+
+<style scoped>
+    .reg-btn {
+        margin-top:15px;
+        background-color: yellow;
+    }
+</style>
