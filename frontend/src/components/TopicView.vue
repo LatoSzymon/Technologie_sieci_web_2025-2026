@@ -76,6 +76,17 @@ const canModerate = computed(() => {
 	return isOwner || isModerator;
 });
 
+const canRemoveModerator = computed(() => {
+	const topic = topics.currentTopic;
+	const userId = auth.user?._id || auth.user?.id;
+	const role = auth.user?.role;
+	if (!topic || !userId) return false;
+	if (role === 'admin') return true;
+	const ownerId = topic.ownerId?._id || topic.ownerId;
+	const isOwner = ownerId && ownerId === userId;
+	return isOwner;
+});
+
 const showBlockModal = ref(false);
 const showCreateSubtopic = ref(false);
 const showPromoteModal = ref(false);
@@ -190,7 +201,7 @@ watch(() => topics.currentTopic, () => {
 						<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
 							{{ mod.login }}
 							<button 
-								v-if="canModerate"
+								v-if="canRemoveModerator"
 								@click="openRemoveModal(mod)"
 								class="remove-moderator-btn"
 								title="Usuń moderatora"
@@ -220,14 +231,16 @@ watch(() => topics.currentTopic, () => {
 						<span class="meta-label">Moderatorzy:</span>
 						<div class="moderators-list">
 							<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
-								{{ mod.login }}							<button 
-								v-if="canModerate"
+								{{ mod.login }}
+								<button 
+								v-if="canRemoveModerator"
 								@click="openRemoveModal(mod)"
 								class="remove-moderator-btn"
 								title="Usuń moderatora"
 							>
 								x
-							</button>							</span>
+							</button>
+							</span>
 						</div>
 					</div>
 				</div>

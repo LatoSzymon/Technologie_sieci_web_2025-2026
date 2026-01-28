@@ -29,8 +29,8 @@ const handleUserApproved = (e) => {
   alert('Twoje konto zostało zaakceptowane! Proszę odśwież stronę.');
 };
 
-onMounted(() => {
-  auth.fetchUser();
+onMounted(async () => {
+  await auth.fetchUser();
   window.addEventListener('user-blocked', handleUserBlocked);
   window.addEventListener('user-unblocked', handleUserUnblocked);
   window.addEventListener('user-approved', handleUserApproved);

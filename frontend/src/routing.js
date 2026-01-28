@@ -11,6 +11,7 @@ import Profile from "./components/Profile.vue";
 import Chat from "./components/Chat.vue";
 
 const routes = [
+  { path: '/', redirect: '/topics' },
   { path: '/pending', component: PendingApproval,
       meta: {requiresAuth: true, requiresApproval: false}
   },
@@ -34,8 +35,19 @@ const router = createRouter({
 });
 
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const auth = authStore();
+
+  if (auth.loading) {
+    await new Promise(resolve => {
+      const checkLoading = setInterval(() => {
+        if (!auth.loading) {
+          clearInterval(checkLoading);
+          resolve();
+        }
+      }, 50);
+    });
+  }
 
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return next('/login');

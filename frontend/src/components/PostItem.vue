@@ -323,9 +323,6 @@ const toggleLike = async () => {
 
 <style scoped>
 
-.btn-like {
-  font-size: large;
-}
 
 .post {
   border: 1px solid #44ff00;
@@ -632,10 +629,11 @@ const toggleLike = async () => {
 
 .tag-badge {
   color: yellow;
-  background-color: green;
+  background-color: rgb(0, 255, 0);
   padding: 2px;
   padding-left: 5px;
   padding-right:5px;
   border-radius: 5px;
+  margin-left: 3px;
 }
 </style>
