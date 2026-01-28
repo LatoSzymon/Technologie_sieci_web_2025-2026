@@ -12,7 +12,12 @@ const props = defineProps({ post: Object });
 const emit = defineEmits(['blocked', 'reply']);
 
 const authorName = computed(() => {
-  return props.post.authorId?.login || props.post.authorId?.email || 'Anonim';
+  const author = props.post.authorId;
+  if (typeof author === 'object' && author !== null) {
+    return author.login || author.email || 'Anonim';
+  }
+  // If it's just an ID string, we can't get the name
+  return 'Anonim';
 });
 
 const postId = computed(() => props.post._id || props.post.id);
@@ -61,9 +66,21 @@ const isAdmin = computed(() => {
 const postTags = computed(() => props.post.tags || []);
 const replyToPostId = computed(() => props.post.replyTo);
 const replyToPost = computed(() => {
-  // In a real scenario, you'd fetch the parent post from the store or API
-  // For now, we can show just the ID as a reference
-  return props.post.replyTo;
+  // Return the full reply object if it exists and has content
+  const replyObj = props.post.replyTo;
+  if (replyObj && typeof replyObj === 'object' && replyObj.content) {
+    return replyObj;
+  }
+  return null;
+});
+
+const replyAuthorName = computed(() => {
+  if (!replyToPost.value) return null;
+  const author = replyToPost.value.authorId;
+  if (typeof author === 'object') {
+    return author.login || author.email || 'Anonim';
+  }
+  return 'Anonim';
 });
 
 const isBlocking = ref(false);
@@ -193,8 +210,8 @@ const toggleLike = async () => {
   <div class="post">
     <div class="author">{{ authorName }}</div>
     
-    <div v-if="replyToPostId" class="reply-indicator">
-      <small class="reply-text">W odpowiedzi na post (ID: {{ replyToPostId }})</small>
+    <div v-if="replyToPost" class="reply-indicator">
+      <small class="reply-text">W odpowiedzi na post od <strong>{{ replyAuthorName }}</strong>: "{{ replyToPost.content.substring(0, 80) }}{{ replyToPost.content.length > 80 ? '...' : '' }}"</small>
     </div>
     
     <div v-if="!isEditingPost">
@@ -223,7 +240,7 @@ const toggleLike = async () => {
         <div v-for="(block, idx) in editCodeBlocks" :key="`edit-${idx}`" class="code-block-edit">
           <div class="code-block-header">
             <span>{{ block.language }}</span>
-            <button @click="removeCodeBlock(idx)" class="btn-remove-code">Usuń</button>
+            <button @click="removeCodeBlock(idx)" class="btn-remove-code">X</button>
           </div>
           <pre><code>{{ block.code }}</code></pre>
         </div>
@@ -257,8 +274,8 @@ const toggleLike = async () => {
     </div>
     
     <div v-if="postTags.length > 0" class="post-tags">
-      <span v-for="tag in postTags" :key="tag" class="tag-badge">
-        {{ tag }}
+      <span v-for="tag in postTags" :key="typeof tag === 'object' ? tag._id : tag" class="tag-badge">
+        {{ typeof tag === 'object' ? tag.name : tag }}
       </span>
     </div>
     
@@ -284,7 +301,7 @@ const toggleLike = async () => {
         <template v-if="isAdmin">
           <button @click="blockUserGlobally" :disabled="isBlocking" class="btn-block-global" title="Zablokuj globalnie">Blokuj globalnie</button>
         </template>
-        <button @click="emit('reply', post)" class="btn-reply">Odpowiedz</button>
+        <button @click="emit('reply', { post, author: authorName })" class="btn-reply">Odpowiedz</button>
       </div>
       <span v-if="error" class="error-text">{{ error }}</span>
     </div>
@@ -333,7 +350,7 @@ const toggleLike = async () => {
   margin: 0;
   padding: 1rem;
   overflow-x: auto;
-  background: #f5f5f5;
+  background: #40ff00;
 }
 
 .code-block code {
@@ -341,11 +358,19 @@ const toggleLike = async () => {
   font-size: 0.9rem;
 }
 
+.actions button {
+  margin-left: 4px;
+  border-radius: 0;
+  background-color: black;
+  border: 3px solid yellow;
+  color: yellow;
+}
+
 .code-block-edit {
   margin-bottom: 1rem;
   padding: 0.5rem;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: yellow;
+  border: 1px solid yellow;
   border-radius: 4px;
 }
 
@@ -372,5 +397,14 @@ const toggleLike = async () => {
   font-size: 0.75rem;
   color: #999;
   margin-top: 0.5rem;
+}
+
+.tag-badge {
+  color: yellow;
+  background-color: green;
+  padding: 2px;
+  padding-left: 5px;
+  padding-right:5px;
+  border-radius: 5px;
 }
 </style>

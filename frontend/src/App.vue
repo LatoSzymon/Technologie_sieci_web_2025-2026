@@ -105,7 +105,9 @@ ul {
   list-style: none;
   width: 40%;
 }
-
+nav button {
+  background-color: yellow;
+}
 nav span {
   font-size: 70%;
 }

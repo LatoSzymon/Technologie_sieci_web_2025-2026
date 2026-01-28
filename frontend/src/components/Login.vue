@@ -70,7 +70,4 @@ const submit = async () => {
         padding: 1em;
     }
 
-    button {
-        margin-top: 15px;
-    }
 </style>
