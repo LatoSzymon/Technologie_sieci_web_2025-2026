@@ -31,19 +31,20 @@ const isUserBlockedInTopic = (topic, userId) => {
             const excUserIdStr = exc.userId.toString ? exc.userId.toString() : String(exc.userId);
             return excUserIdStr === userIdStr;
         });
-        
+
         if (exception && exception.allowedInTopicIds && Array.isArray(exception.allowedInTopicIds)) {
-            const isInAllowedList = exception.allowedInTopicIds.some(topicId => {
-                const allowedIdStr = topicId.toString ? topicId.toString() : String(topicId);
-                return allowedIdStr === topic._id.toString();
+            const topicIdStr = topic._id.toString ? topic._id.toString() : String(topic._id);
+            const isInAllowedList = exception.allowedInTopicIds.some(allowedId => {
+                const allowedIdStr = allowedId.toString ? allowedId.toString() : String(allowedId);
+                return allowedIdStr === topicIdStr;
             });
-            
+
             if (isInAllowedList) {
                 return false;
             }
         }
     }
-    
+
     return true;
 };
 
@@ -65,6 +66,8 @@ const blockUserInTopic = async (req, res) => {
             return res.status(403).json({ message: 'Tylko moderator lub admin może blokować użytkowników w tym temacie' });
         }
 
+        const exceptTopicIdsStr = exceptTopicIds.map(id => id.toString());
+
         if (!topic.bannedUsersIds.some(id => id.equals(userId))) {
             topic.bannedUsersIds.push(userId);
         }
@@ -85,14 +88,23 @@ const blockUserInTopic = async (req, res) => {
         const subtopics = await getAllSubtopics(topicId);
 
         if (subtopics.length > 0) {
-
             for (const subtopicId of subtopics) {
-                if (!exceptTopicIds.includes(subtopicId.toString())) {
-                    await Topic.updateOne(
-                        { _id: subtopicId, bannedUsersIds: { $ne: userId } },
-                        { $push: { bannedUsersIds: userId } }
+                const subtopic = await Topic.findById(subtopicId);
+
+                const isException = exceptTopicIdsStr.includes(subtopicId.toString());
+                
+                if (!isException) {
+                    if (!subtopic.bannedUsersIds.some(id => id.equals(userId))) {
+                        subtopic.bannedUsersIds.push(userId);
+                    }
+                } else {
+                    subtopic.bannedUsersIds = subtopic.bannedUsersIds.filter(id => !id.equals(userId));
+                    subtopic.blockedUserExceptions = (subtopic.blockedUserExceptions || []).filter(
+                        exc => !exc.userId.equals(userId)
                     );
                 }
+                
+                await subtopic.save();
             }
         }
 
@@ -355,9 +367,29 @@ const getTopicTree = async (req, res) => {
 const getTopicSubtree = async (req, res) => {
     try {
         const topicId = req.params.topicId;
-        const subtree = await buildTree(topicId);
+        const topic = await Topic.findById(topicId).populate('tags', 'name');
+        
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie istnieje"});
+        }
+        
+        const children = await buildTree(topicId);
+        
+        const subtree = {
+            _id: topic._id,
+            name: topic.name,
+            path: topic.path,
+            children: children,
+            isHidden: topic.isHidden,
+            isClosed: topic.isClosed,
+            tags: topic.tags,
+            bannedUsersIds: topic.bannedUsersIds,
+            blockedUserExceptions: topic.blockedUserExceptions
+        };
+        
         return res.status(200).json({tree: subtree});
     } catch (err) {
+        console.error('getTopicSubtree error:', err);
         return res.status(500).json({message: "Błąd przy pobieraniu poddrzewa"});
     }
 }
@@ -372,8 +404,7 @@ const updateTopic = async (req, res) => {
         if (!topic) {
             return res.status(404).json({ message: "Temat nie istnieje" });
         }
-        
-        // Sprawdzenie uprawnień: moderator lub admin
+
         const isModerator = topic.ownerId.equals(userId) || 
                            topic.moderatorsId.some(id => id.equals(userId)) || 
                            req.user.role === "admin";

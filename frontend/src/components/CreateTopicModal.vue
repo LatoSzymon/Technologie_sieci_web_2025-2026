@@ -4,7 +4,7 @@
       <h2>{{ parentId ? 'Utwórz podtemat' : 'Utwórz nowy temat' }}</h2>
       <form @submit.prevent="submit">
         <label>Nazwa tematu:
-          <input v-model="name" required />
+          <input v-model="name" class="newName" required />
         </label>
         
         <label>Tagi:
@@ -139,9 +139,9 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: 1em;
   margin-top: 0.5em;
-  border: 1px solid #ddd;
+  border: 2px solid #ffff00;
   padding: 1em;
-  border-radius: 4px;
+  min-width: 550px;
 }
 .available-tags, .selected-tags {
   display: flex;
@@ -152,6 +152,11 @@ onMounted(() => {
   font-size: 0.9em;
   color: #666;
 }
+
+.newName {
+  width: 400px;
+}
+
 .tag-list {
   display: flex;
   flex-direction: column;
@@ -167,11 +172,11 @@ onMounted(() => {
   padding: 0.25em;
   border-radius: 3px;
 }
-.tag-checkbox:hover {
-  background: #f5f5f5;
-}
+
 .tag-checkbox input {
   cursor: pointer;
+  margin: none;
+  padding: none;
 }
 .tag-chips {
   display: flex;
@@ -179,7 +184,7 @@ onMounted(() => {
   gap: 0.5em;
 }
 .tag-chip {
-  background: #007bff;
+  background: #00ff22;
   color: white;
   padding: 0.25em 0.75em;
   border-radius: 20px;
@@ -201,18 +206,10 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  background: #007bff;
-  color: white;
+  background: #ffff00;
+  color: rgb(0, 0, 0);
 }
-button:hover {
-  background: #0056b3;
-}
-button[type="button"] {
-  background: #6c757d;
-}
-button[type="button"]:hover {
-  background: #5a6268;
-}
+
 .error {
   color: red;
   margin-top: 1em;
