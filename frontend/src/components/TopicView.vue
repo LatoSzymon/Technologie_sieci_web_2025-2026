@@ -85,6 +85,7 @@ const removeModeratorLogin = ref('');
 const isEditingTopic = ref(false);
 const editForm = ref({ name: '', description: '' });
 const editError = ref('');
+const postFormRef = ref(null);
 
 const handleBlocked = () => {
 	topics.fetchTopic(route.params.id);
@@ -92,6 +93,12 @@ const handleBlocked = () => {
 
 const handleCreated = () => {
 	topics.fetchTopic(route.params.id);
+};
+
+const handleReplyClick = (replyData) => {
+	if (postFormRef.value) {
+		postFormRef.value.handleReplyFromMain(replyData);
+	}
 };
 
 const handlePromoted = () => {
@@ -140,117 +147,140 @@ watch(() => topics.currentTopic, () => {
 });
 </script>
 
-<template>
-	<div v-if="isBlocked" class="blocked-alert">
-		<h2 class="blocked-heading">Zostałeś zablokowany</h2>
-		<p>Nie możesz publikować postów w tym temacie, ponieważ moderator Cię zablokował.</p>
-	</div>
-	<div v-else-if="topics.loading">Ładowanie...</div>
-	<div v-else-if="topics.error">Błąd: {{ topics.error }}</div>
-	<div v-else-if="isBanned">
-		<div class="banned-message">Nie masz dostępu do tego tematu (zostałeś zbanowany).</div>
-	</div>
-	<div v-else-if="topics.currentTopic">
-		<h2 class="topic-heading">
-			{{ topics.currentTopic.name }}
-			<span v-if="topics.currentTopic.isClosed" class="badge-closed">
-				Zamknięty
-			</span>
-			<span v-if="topics.currentTopic.isHidden" class="badge-hidden">
-				Ukryty
-			</span>
-		</h2>
-		<p>{{ topics.currentTopic.description }}</p>
-		<div v-if="topics.currentTopic.tags && topics.currentTopic.tags.length">
-			<span v-for="tag in topics.currentTopic.tags" :key="tag">{{ tag }}</span>
-		</div>
-		<div v-if="topics.currentTopic.isClosed" class="topic-closed-notice">(Temat zamknięty)</div>
-		<div v-if="topics.currentTopic.children && topics.currentTopic.children.length">
-			<h3>Podtematy:</h3>
-			<ul>
-				<li v-for="child in topics.currentTopic.children" :key="child._id || child.id">
-					{{ child.name }}
-				</li>
-			</ul>
-		</div>
-		<div v-if="topics.currentTopic.ownerId">
-			<small>Właściciel: {{ topics.currentTopic.ownerId.login }}</small>
-		</div>
-		<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length">
-			<small>Moderatorzy: 
-				<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-item">
-					{{ mod.login }}
-					<button 
-						v-if="canModerate"
-						@click="openRemoveModal(mod)" 
-						class="btn-remove-moderator"
-					>
-						Usuń
-					</button>
-				</span>
-			</small>
-		</div>
 
-		<div v-if="canModerate" class="moderation-section">
-			<h3>Moderacja</h3>
-			
-			<div class="moderation-controls">
-				<button v-if="!isEditingTopic" @click="isEditingTopic = true" class="btn-edit-topic">
-					Edytuj temat
-				</button>
-				
-				<div v-if="isEditingTopic" class="edit-topic-form">
-					<div class="form-group">
-						<label class="form-label">
-							Nazwa:
-							<input v-model="editForm.name" type="text" class="form-input" />
-						</label>
-					</div>
-					<div class="form-group">
-						<label class="form-label">
-							Opis:
-							<textarea v-model="editForm.description" class="textarea-description"></textarea>
-						</label>
-					</div>
-					<div v-if="editError" class="error-message">
-						{{ editError }}
-					</div>
-					<button @click="saveTopic" class="btn-save">
-						Zapisz
-					</button>
-					<button @click="cancelEdit" class="btn-cancel">
-						Anuluj
-					</button>
+<template>
+	<div class="topic-view-container">
+		<div v-if="isBlocked" class="alert alert-danger">
+			<h2>Zostałeś zablokowany</h2>
+			<p>Nie możesz publikować postów w tym temacie, ponieważ moderator Cię zablokował.</p>
+		</div>
+		<div v-else-if="topics.loading" class="loading-message">Ładowanie...</div>
+		<div v-else-if="topics.error" class="error-message">Błąd: {{ topics.error }}</div>
+		<div v-else-if="isBanned" class="alert alert-danger">
+			<h3>Nie masz dostępu do tego tematu (zostałeś zbanowany).</h3>
+		</div>
+		<div v-else-if="topics.currentTopic" class="topic-layout">
+			<div class="topic-main">
+				<div class="topic-header-section">
+					<div class="topic-title-area">
+						<h1 class="topic-title">{{ topics.currentTopic.name }}</h1>
+				<div class="topic-badges">
+					<span v-if="topics.currentTopic.isClosed" class="badge badge-closed">Zamknięty</span>
+					<span v-if="topics.currentTopic.isHidden" class="badge badge-hidden">Ukryty</span>
 				</div>
 			</div>
-			
-			<button @click="showBlockModal = true" class="btn-block-user">
-				Blokuj/Odblokuj użytkownika
-			</button>
-			<button @click="showPromoteModal = true" class="btn-promote-moderator">
-				Promuj moderatora
-			</button>
-			<button @click="showCreateSubtopic = true" class="btn-create-subtopic">
-				Utwórz podtemat
-			</button>
+				<p class="topic-description">{{ topics.currentTopic.description }}</p>
+				
+				<div v-if="topics.currentTopic.tags && topics.currentTopic.tags.length" class="tags-section">
+					<h4>Tagi tematu:</h4>
+					<div class="tags-list">
+						<span v-for="tag in topics.currentTopic.tags" :key="tag._id || tag" class="tag-badge">
+							#{{ typeof tag === 'object' ? tag.name : tag }}
+						</span>
+					</div>
+				</div>
+
+				<div class="topic-meta">
+					<div v-if="topics.currentTopic.ownerId" class="meta-item">
+						<strong>Właściciel:</strong> {{ topics.currentTopic.ownerId.login }}
+					</div>
+					<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length" class="meta-item">
+						<strong>Moderatorzy:</strong>
+						<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
+							{{ mod.login }}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="discussion-section">
+				<PostList :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="true" :show-form="false" @reply="handleReplyClick"/>
+			</div>
+		</div>
+
+		<aside class="topic-sidebar">
+			<div class="sidebar-card">
+				<h3 class="card-title">Informacje</h3>
+				<div class="topic-meta">
+					<div v-if="topics.currentTopic.ownerId" class="meta-item">
+						<span class="meta-label">Właściciel:</span>
+						<span class="meta-value">{{ topics.currentTopic.ownerId.login }}</span>
+					</div>
+					<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length" class="meta-item">
+						<span class="meta-label">Moderatorzy:</span>
+						<div class="moderators-list">
+							<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
+								{{ mod.login }}
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div v-if="topics.currentTopic.children && topics.currentTopic.children.length" class="sidebar-card">
+			<h3 class="card-title">Podtematy</h3>
+			<ul class="subtopics-list">
+				<li v-for="child in topics.currentTopic.children" :key="child._id || child.id" class="subtopic-item">
+					<router-link :to="'/topics/' + (child._id || child.id)" class="subtopic-link">
+						{{ child.name }}
+					</router-link>
+				</li>
+			</ul>
+			</div>
+
+			<div v-if="canModerate" class="sidebar-card moderation-card">
+				<h3 class="card-title">Moderacja</h3>
+				<button v-if="!isEditingTopic" @click="isEditingTopic = true" class="btn btn-block btn-primary">
+					Edytuj temat
+				</button>
+				<div v-if="isEditingTopic" class="edit-form">
+					<div class="form-group">
+						<label class="form-label">Nazwa:</label>
+						<input v-model="editForm.name" type="text" class="form-input" />
+					</div>
+					<div class="form-group">
+						<label class="form-label">Opis:</label>
+						<textarea v-model="editForm.description" class="form-textarea"></textarea>
+					</div>
+					<div class="form-actions">
+						<button @click="saveTopic" class="btn btn-success">Zapisz</button>
+						<button @click="cancelEdit" class="btn btn-secondary">Anuluj</button>
+					</div>
+					<div v-if="editError" class="error-message">{{ editError }}</div>
+				</div>
+				<div class="mod-buttons">
+					<button @click="showBlockModal = true" class="btn btn-block btn-warning">Blokuj</button>
+					<button @click="showPromoteModal = true" class="btn btn-block btn-info">Promuj</button>
+					<button @click="showCreateSubtopic = true" class="btn btn-block btn-primary">Stwórz podtemat</button>
+				</div>
+			</div>
+
+			<div class="sidebar-card post-form-card">
+				<h3 class="card-title">Odpowiedź</h3>
+				<PostList ref="postFormRef" :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="false" :show-form="true" @reply="handleReplyClick"/>
+			</div>
+		</aside>
+	</div>
+		<div v-else class="empty-message">
+			Nie znaleziono tematu.
 		</div>
 
 		<BlockUserModal 
 			:open="showBlockModal" 
-			:topic-id="topics.currentTopic._id" 
+			:topic-id="topics.currentTopic?._id" 
 			@close="showBlockModal = false" 
 			@blocked="handleBlocked" 
 			@unblocked="handleBlocked" />
 
 		<PromoteModeratorModal 
 			:open="showPromoteModal" 
-			:topic-id="topics.currentTopic._id" 
+			:topic-id="topics.currentTopic?._id" 
 			@close="showPromoteModal = false" 
 			@promoted="handlePromoted" />
 
 		<RemoveModeratorModal 
 			:open="showRemoveModal" 
-			:topic-id="topics.currentTopic._id"
+			:topic-id="topics.currentTopic?._id"
 			:moderator-id="removeModeratorId"
 			:moderator-login="removeModeratorLogin"
 			@close="showRemoveModal = false" 
@@ -258,16 +288,431 @@ watch(() => topics.currentTopic, () => {
 
 		<CreateTopicModal 
 			:show="showCreateSubtopic" 
-			:parent-id="topics.currentTopic._id" 
+			:parent-id="topics.currentTopic?._id" 
 			@close="showCreateSubtopic = false" 
 			@created="handleCreated" />
-
-        <div>
-            <h3>Dyskusja</h3>
-            <PostList :topic-id="topics.currentTopic._id"/>
-        </div>
-	</div>
-	<div v-else>
-		<em>Nie znaleziono tematu.</em>
 	</div>
 </template>
+
+<style scoped>
+	.topic-view-container {
+		padding: 20px;
+		background-color: #000000;
+		min-height: 100vh;
+	}
+
+	.alert {
+		padding: 20px;
+		border-radius: 8px;
+		margin-bottom: 20px;
+	}
+
+	.alert-danger {
+		background-color: #ff6b6b;
+		color: white;
+		border: 2px solid #ff5252;
+	}
+
+	.loading-message,
+	.empty-message {
+		text-align: center;
+		padding: 40px;
+		font-size: 1.1em;
+		color: #999;
+	}
+
+	.error-message {
+		background-color: #ff6b6b;
+		color: white;
+		padding: 10px;
+		border-radius: 4px;
+		margin: 10px 0;
+	}
+
+	.topic-content {
+		max-width: 1000px;
+		margin: 0 auto;
+	}
+
+	.topic-layout {
+		display: grid;
+		grid-template-columns: 1fr 460px;
+		gap: 30px;
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	.topic-main {
+		display: flex;
+		flex-direction: column;
+		gap: 30px;
+	}
+
+	.topic-sidebar {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		height: fit-content;
+		position: sticky;
+		top: 20px;
+	}
+
+	.sidebar-card {
+		background-color: #2d2d2d;
+		border: 2px solid #ffff00;
+		padding: 20px;
+		border-radius: 4px;
+	}
+
+	.sidebar-card.moderation-card {
+		border-color: #ffff00;
+	}
+
+	.sidebar-card.post-form-card {
+		border-color: #ffff00;
+	}
+
+	.card-title {
+		color: #ffff00;
+		margin: 0 0 15px 0;
+		font-size: 1em;
+		border-bottom: 1px solid #ffff00;
+		padding-bottom: 8px;
+	}
+
+	.sidebar-card.moderation-card .card-title {
+		border-bottom-color: #ffff00;
+		color: #ffff00;
+	}
+
+	.sidebar-card.post-form-card .card-title {
+		border-bottom-color: #ffff00;
+		color: #ffff00;
+	}
+
+	.btn-block {
+		width: 100%;
+		margin-bottom: 8px;
+	}
+
+	.topic-header-section {
+		background-color: #2d2d2d;
+		border: 2px solid #ffff00;
+		padding: 30px;
+		border-radius: 4px;
+		margin-bottom: 0;
+	}
+
+	.topic-title-area {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 20px;
+		margin-bottom: 20px;
+	}
+
+	.topic-title {
+		font-size: 2em;
+		font-weight: bold;
+		color: #ffff00;
+		margin: 0;
+		flex: 1;
+	}
+
+	.topic-badges {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.badge {
+		padding: 6px 12px;
+		border-radius: 20px;
+		font-size: 0.85em;
+		font-weight: bold;
+		white-space: nowrap;
+	}
+
+	.badge-closed {
+		background-color: #ff6b6b;
+		color: white;
+	}
+
+	.badge-hidden {
+		background-color: #ffa500;
+		color: white;
+	}
+
+	.topic-description {
+		font-size: 1.1em;
+		color: #ddd;
+		line-height: 1.6;
+		margin: 0 0 20px 0;
+	}
+
+	.tags-section {
+		margin-bottom: 20px;
+	}
+
+	.tags-section h4 {
+		margin: 0 0 10px 0;
+		color: #ffff00;
+	}
+
+	.tags-list {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.tag-badge {
+		background-color: #1a5a1a;
+		color: #ffff00;
+		padding: 6px 12px;
+		border-radius: 4px;
+		font-size: 0.9em;
+		border: 1px solid #ffff00;
+	}
+
+	.topic-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding-top: 0;
+		border-top: none;
+	}
+
+	.meta-item {
+		color: #aaa;
+		font-size: 0.95em;
+	}
+
+	.meta-label {
+		color: #ffff00;
+		font-weight: bold;
+		display: block;
+		margin-bottom: 5px;
+	}
+
+	.meta-value {
+		color: #ddd;
+	}
+
+	.moderators-list {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.subtopics-section {
+		margin-bottom: 30px;
+	}
+
+	.subtopics-section h3 {
+		color: #ffff00;
+		border-bottom: 2px solid #ffff00;
+		padding-bottom: 10px;
+		margin-bottom: 15px;
+	}
+
+	.subtopics-list {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 15px;
+	}
+
+	.subtopic-item {
+		background-color: #2d2d2d;
+		border: 1px solid #ffff00;
+		padding: 12px;
+		border-radius: 4px;
+		color: #eee;
+	}
+
+	.subtopic-link {
+		color: #ffff00;
+		text-decoration: none;
+	}
+
+	.subtopic-link:hover {
+		text-decoration: underline;
+	}
+
+	/* Sidebar - Subtopics */
+	.topic-sidebar .subtopics-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.topic-sidebar .subtopic-item {
+		padding: 10px;
+		border: 1px solid #ffff00;
+		background-color: #2d2d2d;
+	}
+
+	.moderator-badge {
+		display: inline-block;
+		background-color: #ffff00;
+		color: rgb(255, 0, 0);
+		padding: 4px 10px;
+		border-radius: 12px;
+		font-size: 0.9em;
+		margin-left: 5px;
+		margin-right: 5px;
+	}
+
+	.moderation-panel {
+		background-color: #2d2d2d;
+		border: 2px solid #ffff00;
+		padding: 25px;
+		border-radius: 4px;
+		margin-bottom: 30px;
+	}
+
+	.panel-title {
+		color: #ffff00;
+		margin-top: 0;
+		border-bottom: 1px solid #ffff00;
+		padding-bottom: 8px;
+	}
+
+	.mod-controls {
+		margin-bottom: 20px;
+	}
+
+	.edit-form {
+		background-color: rgba(0, 0, 0, 0.3);
+		padding: 15px;
+		border-radius: 6px;
+		margin-top: 15px;
+	}
+
+	.form-group {
+		margin-bottom: 15px;
+	}
+
+	.form-group label,
+	.form-label {
+		display: block;
+		color: #ffff00;
+		font-weight: bold;
+		margin-bottom: 5px;
+	}
+
+	.form-input,
+	.form-textarea {
+		width: 100%;
+		padding: 10px;
+		border: 2px solid #ffff00;
+		border-radius: 4px;
+		background-color: #1a1a1a;
+		color: #fff;
+		font-family: "Pixelify Sans", sans-serif;
+		box-sizing: border-box;
+	}
+
+	.form-input:focus,
+	.form-textarea:focus {
+		outline: none;
+		border-color: #ffff00;
+	}
+
+	.form-textarea {
+		resize: vertical;
+		min-height: 100px;
+	}
+
+	.form-actions {
+		display: flex;
+		gap: 10px;
+		margin-top: 15px;
+	}
+
+	.mod-buttons {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.btn {
+		padding: 10px 15px;
+		border: none;
+		border-radius: 4px;
+		font-weight: bold;
+		cursor: pointer;
+		font-family: "Pixelify Sans", sans-serif;
+	}
+
+	.btn-primary {
+		background-color: #ffff00;
+		color: #000;
+	}
+
+	.btn-primary:hover {
+		background-color: #e6e600;
+	}
+
+	.btn-success {
+		background-color: #ffff00;
+		color: #000;
+	}
+
+	.btn-success:hover {
+		background-color: #e6e600;
+	}
+
+	.btn-secondary {
+		background-color: #666;
+		color: #fff;
+	}
+
+	.btn-secondary:hover {
+		background-color: #555;
+	}
+
+	.btn-warning {
+		background-color: #ffff00;
+		color: #000;
+	}
+
+	.btn-warning:hover {
+		background-color: #e6e600;
+	}
+
+	.btn-info {
+		background-color: #ffff00;
+		color: #000;
+	}
+
+	.btn-info:hover {
+		background-color: #e6e600;
+	}
+
+	.discussion-section {
+		margin-top: 0;
+	}
+
+	/* Responsywność */
+	@media (max-width: 1024px) {
+		.topic-layout {
+			grid-template-columns: 1fr;
+		}
+
+		.topic-sidebar {
+			position: static;
+			grid-template-columns: repeat(2, 1fr);
+			display: grid;
+			gap: 20px;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.topic-sidebar {
+			display: flex;
+			flex-direction: column;
+		}
+	}
+</style>
