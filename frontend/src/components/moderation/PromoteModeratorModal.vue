@@ -45,7 +45,7 @@ const filteredUsers = computed(() => {
 
 const fetchUsers = async () => {
     try {
-        const response = await api.get('/admin/all-users');
+        const response = await api.get(`/topics/${props.topicId}/eligible-users`);
         allUsers.value = response.data.users || [];
     } catch (e) {
         error.value = 'Błąd pobierania użytkowników';
