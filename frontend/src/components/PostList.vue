@@ -3,13 +3,28 @@
 import { usePostStore } from '../posts';
 import { useSocketStore } from '../stores/socket';
 import * as postService from '../services/postService';
+import tagService from '../services/tagService';
 import api from '../services/api';
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, defineExpose } from 'vue';
 import PostItem from './PostItem.vue';
 
 const props = defineProps({ 
-    topicId: String 
+    topicId: String,
+    isSidebar: {
+        type: Boolean,
+        default: false
+    },
+    showPosts: {
+        type: Boolean,
+        default: true
+    },
+    showForm: {
+        type: Boolean,
+        default: true
+    }
 });
+
+const emit = defineEmits(['reply']);
 
 const postStore = usePostStore();
 const socketStore = useSocketStore();
@@ -20,7 +35,8 @@ const newCodeBlock = ref({ language: 'javascript', code: '' });
 const isAdding = ref(false);
 const addError = ref("");
 const showCodeForm = ref(false);
-const newPostTags = ref("");
+const selectedTagIds = ref([]);
+const availableTags = ref([]);
 const replyingToPostId = ref(null);
 const replyingToPost = ref(null);
 
@@ -70,7 +86,7 @@ const clearForm = () => {
     newPostContent.value = "";
     newCodeBlocks.value = [];
     newCodeBlock.value = { language: 'javascript', code: '' };
-    newPostTags.value = "";
+    selectedTagIds.value = [];
     showCodeForm.value = false;
     addError.value = "";
     replyingToPostId.value = null;
@@ -106,6 +122,13 @@ const goToNextPage = () => {
 onMounted(() => {
     console.log('Component mounted for topic:', props.topicId);
     load();
+
+    // Załaduj tagi
+    tagService.getTags().then(tags => {
+        availableTags.value = tags;
+    }).catch(err => {
+        console.error('Error loading tags:', err);
+    });
 
     socketStore.on("post:new", handleNewPost);
     console.log('Listening for post:new events');
@@ -149,17 +172,13 @@ const addPost = async () => {
     addError.value = "";
     console.log('Sending new post to API...');
     try {
-        const tags = newPostTags.value
-            .split(',')
-            .map(tag => tag.trim())
-            .filter(tag => tag.length > 0);
-        
+        // Send the content without adding mention - that's only for display
         await postService.createPost(
             props.topicId, 
             newPostContent.value, 
             newCodeBlocks.value,
             replyingToPostId.value,
-            tags
+            selectedTagIds.value
         );
         console.log('Post created successfully');
         clearForm();
@@ -171,10 +190,15 @@ const addPost = async () => {
     }
 }
 
-const setReplyTo = (post) => {
+const setReplyTo = ({ post, author }) => {
     replyingToPostId.value = post._id;
-    replyingToPost.value = post.content;
-    window.scrollTo({ top: document.querySelector('form').offsetTop, behavior: 'smooth' });
+    replyingToPost.value = {
+        ...post,
+        author: author
+    };
+    
+    // Emit event to parent for sidebar coordination (no text added to textarea)
+    emit('reply', { post, author });
 }
 
 const cancelReply = () => {
@@ -182,51 +206,75 @@ const cancelReply = () => {
     replyingToPost.value = null;
 }
 
+const handleReplyFromMain = (replyData) => {
+    // This method is called from parent (TopicView) to set reply in this form
+    const { post, author } = replyData;
+    replyingToPostId.value = post._id;
+    replyingToPost.value = {
+        ...post,
+        author: author
+    };
+}
+
+defineExpose({
+    handleReplyFromMain
+});
+
 </script>
 
 <template>
-    <div>
-        <PostItem 
-            v-for="post in postStore.posts" 
-            :key="post._id || post.id" 
-            :post="post"
-            @reply="setReplyTo"
-        />
-        
-        <form @submit.prevent="addPost" class="add-post-form">
-            <h3>Nowy post</h3>
+    <div class="post-list-container" :class="{ 'sidebar-mode': isSidebar }">
+        <!-- Lista postów (ukryta jeśli showPosts=false lub w trybie sidebar) -->
+        <div v-if="showPosts" class="posts-section">
+            <PostItem 
+                v-for="post in postStore.posts" 
+                :key="post._id || post.id" 
+                :post="post"
+                @reply="setReplyTo"
+            />
+        </div>
+
+        <!-- Formularz dodawania posta -->
+        <form v-if="showForm" @submit.prevent="addPost" class="add-post-form">
+            <h3 class="form-title">Napisz odpowiedź</h3>
             
             <div v-if="replyingToPost" class="reply-info">
                 <div class="reply-content">
                     <div>
-                        <small class="reply-author">Odpowiadasz na post autora <strong>{{ replyingToPost.authorId?.login }}</strong></small>
-                        <div class="reply-preview">{{ replyingToPost.content.substring(0, 100) }}...</div>
+                        <small class="reply-author">Odpowiadasz na post autora <strong>{{ replyingToPost.author }}</strong></small>
+                        <div class="reply-preview">{{ replyingToPost.content.substring(0, 100) }}{{ replyingToPost.content.length > 100 ? '...' : '' }}</div>
                     </div>
-                    <button type="button" @click="cancelReply" class="btn-cancel-reply">✕ Anuluj</button>
+                    <button type="button" @click="cancelReply" class="btn-cancel-reply">X</button>
                 </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" :class="{ 'sidebar-textarea': isSidebar }">
                 <textarea 
                     v-model="newPostContent" 
-                    rows="3" 
-                    class="textarea-content"
-                    placeholder="Napisz nowy post..." 
+                    :rows="isSidebar ? 3 : 4" 
+                    class="form-textarea"
+                    :placeholder="isSidebar ? 'Dodaj odpowiedź...' : 'Napisz swoją opinię...'" 
                     :disabled="isAdding"
                 ></textarea>
             </div>
             
             <div class="form-group">
-                <label class="form-label">
-                    <strong>Tagi</strong> <small>(oddzielone przecinkami)</small>
-                    <input 
-                        v-model="newPostTags" 
-                        type="text"
-                        class="input-tags"
-                        placeholder="np: javascript, vue, typescript"
-                        :disabled="isAdding"
-                    />
-                </label>
+                <label class="form-label">Tagi:</label>
+                <select v-model="selectedTagIds" multiple class="form-select">
+                    <option v-for="tag in availableTags" :key="tag._id" :value="tag._id">
+                        {{ tag.name }}
+                    </option>
+                </select>
+                <small class="form-help">Przytrzymaj Ctrl/Cmd aby wybrać wiele tagów</small>
+            </div>
+
+            <div v-if="selectedTagIds.length" class="selected-tags">
+                <div class="selected-tags-title">Wybrane tagi:</div>
+                <div class="tags-chips">
+                    <span v-for="tagId in selectedTagIds" :key="tagId" class="tag-chip">
+                        {{ availableTags.find(t => t._id === tagId)?.name }}
+                    </span>
+                </div>
             </div>
             
             <div v-if="newCodeBlocks.length" class="existing-codes">
@@ -238,7 +286,7 @@ const cancelReply = () => {
                         @click="removeCodeBlock(idx)"
                         class="btn-remove-code"
                     >
-                        Usuń
+                        X
                     </button>
                 </div>
             </div>
@@ -246,38 +294,52 @@ const cancelReply = () => {
             <div v-if="showCodeForm" class="code-form">
                 <h4>Dodaj blok kodu</h4>
                 <div class="form-group">
-                    <label class="form-label">
-                        Kod:
-                        <textarea 
-                            v-model="newCodeBlock.code" 
-                            class="textarea-code"
-                            placeholder="Wklej kod tutaj..."
-                        ></textarea>
-                    </label>
+                    <label class="form-label">Język:</label>
+                    <select v-model="newCodeBlock.language" class="form-select">
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="sql">SQL</option>
+                        <option value="bash">Bash</option>
+                    </select>
                 </div>
-                <button 
-                    type="button"
-                    @click="addCodeBlock"
-                    class="btn-add-code"
-                >
-                    Dodaj kod
-                </button>
-                <button 
-                    type="button"
-                    @click="showCodeForm = false"
-                    class="btn-close-form"
-                >
-                    Zamknij formularz
-                </button>
+                <div class="form-group">
+                    <label class="form-label">Kod:</label>
+                    <textarea 
+                        v-model="newCodeBlock.code" 
+                        class="form-textarea"
+                        placeholder="Wklej kod tutaj..."
+                    ></textarea>
+                </div>
+                <div class="code-form-actions">
+                    <button 
+                        type="button"
+                        @click="addCodeBlock"
+                        class="btn btn-success"
+                    >
+                        Dodaj kod
+                    </button>
+                    <button 
+                        type="button"
+                        @click="showCodeForm = false"
+                        class="btn btn-secondary"
+                    >
+                        Zamknij
+                    </button>
+                </div>
             </div>
             
             <div v-if="!showCodeForm" class="form-group">
                 <button 
                     type="button"
                     @click="showCodeForm = true"
-                    class="btn-toggle-code-form"
+                    class="btn btn-info"
                 >
-                    + Dodaj kod
+                    Dodaj kod
                 </button>
             </div>
             
@@ -285,20 +347,19 @@ const cancelReply = () => {
                 {{ addError }}
             </div>
             
-            <div>
-                <button type="submit" :disabled="isAdding || !newPostContent.trim()" class="btn-submit">
+            <div class="form-actions" :class="{ 'sidebar-actions': isSidebar }">
+                <button type="submit" :disabled="isAdding || !newPostContent.trim()" class="btn btn-primary btn-large">
                     {{ isAdding ? 'Dodawanie...' : 'Dodaj post' }}
                 </button>
             </div>
         </form>
-        
-        <!-- Pagination Controls -->
-        <div v-if="totalPages > 0" class="pagination-section">
+
+        <div v-if="showPosts && totalPages > 0" class="pagination-section">
             <div class="pagination-info">
-                <div>
+                <div class="page-size-control">
                     <label class="page-size-label">
                         <strong>Wpisów na stronę:</strong>
-                        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="page-size-select">
+                        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="form-select-small">
                             <option :value="10">10</option>
                             <option :value="20" selected>20</option>
                             <option :value="50">50</option>
@@ -307,7 +368,7 @@ const cancelReply = () => {
                     </label>
                 </div>
                 <div class="page-counter">
-                    <small class="pagination-text">Strona {{ currentPage }} z {{ totalPages }} (razem {{ totalPosts }} wpisów)</small>
+                    <small>Strona <strong>{{ currentPage }}</strong> z <strong>{{ totalPages }}</strong> (razem <strong>{{ totalPosts }}</strong> wpisów)</small>
                 </div>
             </div>
             
@@ -327,11 +388,7 @@ const cancelReply = () => {
                         :key="page"
                         @click="goToPage(page)"
                         class="page-button"
-                        :style="{
-                            background: page === currentPage ? '#0066cc' : '#fff',
-                            color: page === currentPage ? '#fff' : '#333',
-                            fontWeight: page === currentPage ? 'bold' : 'normal'
-                        }"
+                        :class="{ active: page === currentPage }"
                     >
                         {{ page }}
                     </button>
@@ -341,7 +398,7 @@ const cancelReply = () => {
                     <button 
                         v-if="totalPages > 5 && currentPage > totalPages - 2"
                         @click="goToPage(totalPages)"
-                        class="page-button page-button-last"
+                        class="page-button"
                     >
                         {{ totalPages }}
                     </button>
@@ -359,3 +416,440 @@ const cancelReply = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.post-list-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    color: #eee;
+}
+
+.post-list-container.sidebar-mode {
+    max-width: 100%;
+    margin: 0;
+}
+
+.post-list-container.sidebar-mode .add-post-form {
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.post-list-container.sidebar-mode .form-title {
+    font-size: 0.9em;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+}
+
+.post-list-container.sidebar-mode .form-textarea {
+    min-height: 60px;
+}
+
+.post-list-container.sidebar-mode .form-group {
+    margin-bottom: 12px;
+}
+
+.post-list-container.sidebar-mode .form-label {
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.post-list-container.sidebar-mode .btn {
+    padding: 8px 10px;
+    font-size: 0.85em;
+}
+
+.post-list-container.sidebar-mode .btn-large {
+    padding: 10px;
+}
+
+.post-list-container.sidebar-mode .error-message {
+    padding: 8px;
+    margin-bottom: 12px;
+    font-size: 0.85em;
+}
+
+.posts-section {
+    margin-bottom: 40px;
+}
+
+.add-post-form {
+    background-color: #2d2d2d;
+    border: 2px solid #ffff00;
+    padding: 25px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+}
+
+.form-title {
+    color: #ffff00;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ffff00;
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    color: #ffff00;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.form-help {
+    display: block;
+    color: #999;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+.form-textarea,
+.form-select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ffff00;
+    border-radius: 4px;
+    background-color: #1a1a1a;
+    color: #fff;
+    font-family: "Pixelify Sans", monospace;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+
+.form-select-small {
+    padding: 6px 10px;
+    border: 1px solid #ffff00;
+    border-radius: 4px;
+    background-color: #1a1a1a;
+    color: #fff;
+    font-family: "Pixelify Sans", sans-serif;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-textarea:focus,
+.form-select:focus,
+.form-select-small:focus {
+    outline: none;
+    border-color: #ffff00;
+}
+
+.form-textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.reply-info {
+    background-color: rgba(255, 255, 0, 0.384);
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.reply-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: auto;
+    margin:0;
+}
+
+.reply-author {
+    color: #ffff00;
+    font-weight: bold;
+}
+
+.reply-preview {
+    color: #bbb;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+.btn-cancel-reply {
+    background-color: #000000;
+    color: yellow;
+    font-weight: bolder;
+    border: 3px solid yellow;
+    border-radius: none;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.btn-cancel-reply:hover {
+    background-color: yellow;
+    color: black;
+}
+
+/* Tagi */
+.selected-tags {
+    background-color: yellow;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.selected-tags-title {
+    color: #000000;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.tags-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag-chip {
+    background-color: #000000;
+    color: #ffff00;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    border: 1px solid #ffff00;
+}
+
+.existing-codes {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.existing-codes h4 {
+    color: #ffff00;
+    margin-top: 0;
+}
+
+.code-block-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 0, 0.05);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.code-block-item span {
+    color: #ddd;
+}
+
+.btn-remove-code {
+    background-color: yellow;
+    color: rgb(0, 0, 0);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    margin-left: 10px;
+}
+
+
+.code-form {
+    background-color: #2d2d2d;
+    border: 1px solid #ffff00;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.code-form h4 {
+    color: #ffff00;
+    margin-top: 0;
+}
+
+.code-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* Przyciski */
+.form-actions {
+    margin-top: 20px;
+}
+
+.form-actions.sidebar-actions {
+    margin-top: 12px;
+}
+
+.form-actions.sidebar-actions .btn-large {
+    padding: 10px 15px;
+    font-size: 0.9em;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: "Pixelify Sans", sans-serif;
+}
+
+.btn-primary {
+    background-color: #ffff00;
+    color: #000;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #e6e600;
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-large {
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+}
+
+.btn-success {
+    background-color: #ffff00;
+    color: #000;
+}
+
+.btn-success:hover {
+    background-color: #e6e600;
+}
+
+.btn-secondary {
+    background-color: #666;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background-color: #555;
+}
+
+.btn-info {
+    background-color: #ffff00;
+    color: #000;
+}
+
+.btn-info:hover {
+    background-color: #e6e600;
+}
+
+.error-message {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #ff5252;
+}
+
+.pagination-section {
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #2d2d2d;
+    border: 1px solid #ffff00;
+    border-radius: 4px;
+}
+
+.pagination-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.page-size-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-size-label {
+    color: #ffff00;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-counter {
+    color: #ddd;
+}
+
+.page-counter small {
+    font-size: 0.95em;
+}
+
+.page-counter strong {
+    color: #ffff00;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-pagination {
+    padding: 8px 12px;
+    background-color: #ffff00;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background-color: #e6e600;
+}
+
+.btn-pagination:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.page-button {
+    padding: 6px 10px;
+    background-color: #1a1a1a;
+    color: #fff;
+    border: 1px solid #ffff00;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.page-button:hover {
+    background-color: #ffff00;
+    color: #000;
+}
+
+.page-button.active {
+    background-color: #ffff00;
+    color: #000;
+    border-color: #e6e600;
+}
+
+.pagination-ellipsis {
+    color: #999;
+}
+</style>
