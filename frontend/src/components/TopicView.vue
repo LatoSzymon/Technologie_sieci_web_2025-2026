@@ -319,7 +319,6 @@ watch(() => topics.currentTopic, () => {
 
 	.alert {
 		padding: 20px;
-		border-radius: 8px;
 		margin-bottom: 20px;
 	}
 
@@ -341,7 +340,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #ff6b6b;
 		color: white;
 		padding: 10px;
-		border-radius: 4px;
 		margin: 10px 0;
 	}
 
@@ -377,7 +375,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #2d2d2d;
 		border: 2px solid #ffff00;
 		padding: 20px;
-		border-radius: 4px;
 	}
 
 	.sidebar-card.moderation-card {
@@ -415,7 +412,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #2d2d2d;
 		border: 2px solid #ffff00;
 		padding: 30px;
-		border-radius: 4px;
 		margin-bottom: 0;
 	}
 
@@ -443,7 +439,6 @@ watch(() => topics.currentTopic, () => {
 
 	.badge {
 		padding: 6px 12px;
-		border-radius: 20px;
 		font-size: 0.85em;
 		font-weight: bold;
 		white-space: nowrap;
@@ -543,7 +538,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #2d2d2d;
 		border: 1px solid #ffff00;
 		padding: 12px;
-		border-radius: 4px;
 		color: #eee;
 	}
 
@@ -574,7 +568,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #ffff00;
 		color: rgb(255, 0, 0);
 		padding: 4px 10px;
-		border-radius: 12px;
 		font-size: 0.9em;
 		margin-left: 5px;
 		margin-right: 5px;
@@ -614,7 +607,6 @@ watch(() => topics.currentTopic, () => {
 		background-color: #2d2d2d;
 		border: 2px solid #ffff00;
 		padding: 25px;
-		border-radius: 4px;
 		margin-bottom: 30px;
 	}
 
@@ -632,7 +624,6 @@ watch(() => topics.currentTopic, () => {
 	.edit-form {
 		background-color: rgba(0, 0, 0, 0.3);
 		padding: 15px;
-		border-radius: 6px;
 		margin-top: 15px;
 	}
 
@@ -653,7 +644,6 @@ watch(() => topics.currentTopic, () => {
 		width: 100%;
 		padding: 10px;
 		border: 2px solid #ffff00;
-		border-radius: 4px;
 		background-color: #1a1a1a;
 		color: #fff;
 		font-family: "Pixelify Sans", sans-serif;
@@ -686,7 +676,6 @@ watch(() => topics.currentTopic, () => {
 	.btn {
 		padding: 10px 15px;
 		border: none;
-		border-radius: 4px;
 		font-weight: bold;
 		cursor: pointer;
 		font-family: "Pixelify Sans", sans-serif;
