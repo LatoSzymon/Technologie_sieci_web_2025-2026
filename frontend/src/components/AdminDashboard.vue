@@ -233,7 +233,7 @@ onMounted(fetchPending);
 		<div v-if="actionInfo" class="alert alert-success">{{ actionInfo }}</div>
 
 		<section class="admin-section">
-			<h3 class="section-title">Powiadomienia administracyjne</h3>
+			<h3 class="section-title">Powiadomienia</h3>
 			<div v-if="notifications.length === 0" class="empty-state">Brak powiadomień.</div>
 			<ul v-else class="notifications-list">
 				<li v-for="(n, idx) in notifications" :key="idx" class="notification-item">
@@ -359,7 +359,7 @@ onMounted(fetchPending);
 		</section>
 
 		<section class="admin-section">
-			<h3 class="section-title">Zarządzanie tematami</h3>
+			<h3 class="section-title">Zarządzanie drzewami tematów</h3>
 			<div v-if="allTopics.length === 0" class="empty-state">Brak tematów.</div>
 			<div v-else class="topics-grid">
 				<div v-for="topic in allTopics" :key="topic._id" class="topic-card">
@@ -491,8 +491,6 @@ onMounted(fetchPending);
 }
 
 .admin-section {
-	background-color: rgba(238, 255, 0, 0.05);
-	border: 2px solid rgb(238, 255, 0);
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 20px;
@@ -817,8 +815,7 @@ onMounted(fetchPending);
 }
 
 .user-card {
-	background-color: rgba(238, 255, 0, 0.05);
-	border-left: 4px solid rgb(238, 255, 0);
+	border: 4px solid rgb(238, 255, 0);
 	border-radius: 6px;
 	padding: 15px;
 	display: flex;
@@ -870,8 +867,8 @@ onMounted(fetchPending);
 }
 
 .topic-card {
-	background-color: rgba(238, 255, 0, 0.05);
-	border-left: 4px solid rgb(238, 255, 0);
+	background-color: rgba(0, 0, 0, 0.05);
+	border: 4px solid rgb(238, 255, 0);
 	border-radius: 6px;
 	padding: 15px;
 	display: flex;
