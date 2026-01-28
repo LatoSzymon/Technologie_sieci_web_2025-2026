@@ -186,9 +186,19 @@ watch(() => topics.currentTopic, () => {
 					</div>
 					<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length" class="meta-item">
 						<strong>Moderatorzy:</strong>
+					<div class="moderators-container">
 						<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
 							{{ mod.login }}
+							<button 
+								v-if="canModerate"
+								@click="openRemoveModal(mod)"
+								class="remove-moderator-btn"
+								title="Usuń moderatora"
+							>
+								x
+							</button>
 						</span>
+					</div>
 					</div>
 				</div>
 			</div>
@@ -210,8 +220,14 @@ watch(() => topics.currentTopic, () => {
 						<span class="meta-label">Moderatorzy:</span>
 						<div class="moderators-list">
 							<span v-for="mod in topics.currentTopic.moderatorsId" :key="mod._id" class="moderator-badge">
-								{{ mod.login }}
-							</span>
+								{{ mod.login }}							<button 
+								v-if="canModerate"
+								@click="openRemoveModal(mod)"
+								class="remove-moderator-btn"
+								title="Usuń moderatora"
+							>
+								x
+							</button>							</span>
 						</div>
 					</div>
 				</div>
@@ -562,6 +578,36 @@ watch(() => topics.currentTopic, () => {
 		font-size: 0.9em;
 		margin-left: 5px;
 		margin-right: 5px;
+		position: relative;
+		transition: all 0.2s ease;
+	}
+
+	.moderator-badge:hover {
+		background-color: #e6e600;
+	}
+
+	.remove-moderator-btn {
+		background: none;
+		border: none;
+		color: rgb(255, 0, 0);
+		cursor: pointer;
+		font-size: 1em;
+		padding: 0 4px;
+		margin-left: 6px;
+		transition: all 0.2s ease;
+		font-weight: bold;
+	}
+
+	.remove-moderator-btn:hover {
+		color: #cc0000;
+		transform: scale(1.2);
+	}
+
+	.moderators-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 8px;
 	}
 
 	.moderation-panel {

@@ -584,4 +584,49 @@ const removeModerator = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator };
+const getEligibleUsersForModerator = async (req, res) => {
+    try {
+        const { topicId } = req.params;
+        const currentUserId = req.user.userId;
+
+        if (!topicId) {
+            return res.status(400).json({ message: "topicId jest wymagane" });
+        }
+
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+
+        const isOwner = topic.ownerId.equals(currentUserId);
+        const isModerator = topic.moderatorsId.some(id => id.equals(currentUserId));
+        const isAdmin = req.user.role === 'admin';
+
+        if (!isOwner && !isModerator && !isAdmin) {
+            return res.status(403).json({ 
+                message: "Nie masz uprawnień do promowania moderatorów w tym temacie" 
+            });
+        }
+
+        const currentModerators = topic.moderatorsId.map(id => id.toString());
+        const topicOwner = topic.ownerId.toString();
+
+        const users = await User.find({
+            _id: {
+                $nin: [...currentModerators, topicOwner],
+                $ne: currentUserId
+            },
+            isApprovedByAdmin: true,
+            isBlocked: false
+        }).select('_id login mail').sort({ login: 1 });
+
+        return res.status(200).json({ users });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Błąd przy pobieraniu użytkowników", 
+            error 
+        });
+    }
+};
+
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator };
