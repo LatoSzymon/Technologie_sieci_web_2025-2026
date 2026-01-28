@@ -347,7 +347,7 @@ const toggleLike = async () => {
 
 .code-block {
   margin-bottom: 1rem;
-  background: #f5f5f5;
+  background: #322f2f;
   border-radius: 4px;
   overflow: hidden;
 }

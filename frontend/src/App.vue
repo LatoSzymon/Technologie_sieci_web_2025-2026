@@ -80,6 +80,7 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 nav {
   background: #037e2a;
@@ -115,16 +116,16 @@ main {
   flex: 1 0 auto;
 }
 footer {
-  margin: 0;
+  margin: none;
   padding: 1em;
   background: #037e2a;
   text-align: center;
-  border-top: 2px solid #fff00033;
   flex-direction: column;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 60%;
+  width: 100%;
 }
 
 ul {

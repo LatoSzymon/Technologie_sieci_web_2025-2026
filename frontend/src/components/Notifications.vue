@@ -52,7 +52,7 @@ onUnmounted(() => {
   padding: 12px 16px;
   border-radius: 6px;
   border-left: 4px solid;
-  background-color: rgba(238, 255, 0, 0.05);
+  background-color: rgb(238, 255, 0);
   border-left-color: rgb(238, 255, 0);
   color: rgb(238, 255, 0);
   font-weight: 500;
@@ -60,19 +60,19 @@ onUnmounted(() => {
 }
 
 .notification.success {
-  background-color: rgba(74, 222, 128, 0.1);
+  background-color: rgb(74, 222, 128);
   border-left-color: #4ade80;
   color: #86efac;
 }
 
 .notification.error {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgb(239, 68, 68);
   border-left-color: #ef4444;
   color: #fca5a5;
 }
 
 .notification.warning {
-  background-color: rgba(249, 115, 22, 0.1);
+  background-color: rgb(249, 116, 22);
   border-left-color: #f97316;
   color: #fed7aa;
 }
