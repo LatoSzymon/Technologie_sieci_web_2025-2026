@@ -58,4 +58,6 @@ const topicSchema = new Schema({
     }
 }, { timestamps: true });
 
+topicSchema.index({parent: 1, name: 1}, {unique: true});
+
 module.exports = model("Topic", topicSchema);

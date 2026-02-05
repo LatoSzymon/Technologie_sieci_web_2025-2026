@@ -2,6 +2,18 @@ const Post = require("../models/Post");
 const Topic = require("../models/Topic");
 const { post } = require("../routes/userRoutes");
 
+const toId = v => (v?.toString ? v.toString() : String(v));
+const hasId = (arr, id) => arr?.some(x => toId(x) === toId(id));
+
+const isUserBlockedInTopic = (topic, userId) => {
+  if (!topic || !userId) return false;
+  if (!hasId(topic.bannedUsersIds, userId)) return false;
+
+  const exc = topic.blockedUserExceptions?.find(e => hasId([e.userId], userId));
+  if (exc?.allowedInTopicIds?.length && hasId(exc.allowedInTopicIds, topic._id)) return false;
+  return true;
+};
+
 const createPost = async (req, res) => {
     try {
         const {topicId, content, codeBlocks, replyTo, tags} = req.body;
@@ -21,7 +33,7 @@ const createPost = async (req, res) => {
             return res.status(403).json({message: "Temat zamknięty, nie można w nim pisać"});
         }
 
-        if (topic.bannedUsersIds.some(i => authorId === i)) {
+        if (isUserBlockedInTopic(topic, authorId)) {
             return res.status(403).json({message:"Jestes zablokowany w tym temacie"});
         }
 

@@ -61,7 +61,7 @@ const blockUserInTopic = async (req, res) => {
             return res.status(404).json({ message: 'Temat nie istnieje' });
         }
 
-        const isModerator = topic.ownerId.equals(currentUserId) || topic.moderatorsId.some(id => id.equals(currentUserId) || req.user.role === "admin");
+        const isModerator = topic.ownerId.equals(currentUserId) || topic.moderatorsId.some(id => id.equals(currentUserId)) || req.user.role === "admin";
         if (!isModerator) {
             return res.status(403).json({ message: 'Tylko moderator lub admin może blokować użytkowników w tym temacie' });
         }
@@ -465,10 +465,10 @@ const promoteModerator = async (req, res) => {
             return res.status(404).json({ message: "Temat nie istnieje" });
         }
 
-        const canPromote = topic.ownerId.equals(currentUserId) || req.user.role === "admin";
+        const canPromote = topic.ownerId.equals(currentUserId) || req.user.role === "admin" || topic.moderatorsId.some(id => id.equals(currentUserId));
         if (!canPromote) {
             return res.status(403).json({ 
-                message: "Tylko właściciel tematu lub admin może promować moderatora" 
+                message: "Tylko moderator tematu lub admin może promować moderatora" 
             });
         }
 
@@ -555,6 +555,14 @@ const removeModerator = async (req, res) => {
 
         topic.moderatorsId = topic.moderatorsId.filter(id => !id.equals(userId));
         await topic.save();
+
+        const subtopics = await getAllSubtopics(topicId);
+        if (subtopics.length > 0) {
+            await Topic.updateMany(
+                { _id: { $in: subtopics } },
+                { $pull: { moderatorsId: userId } }
+            );
+        }
         
         try {
             const io = req.app.get && req.app.get('io');
