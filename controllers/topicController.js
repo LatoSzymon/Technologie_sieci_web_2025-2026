@@ -673,4 +673,182 @@ const getTopicUsers = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers };
+const closeTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+        const user = req.user;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (topic.isClosed) {
+            return res.status(409).json({message: "Temat jest już zamknięty"});
+        }
+
+        const canChange = topic.ownerId.equals(user.userId) || topic.moderatorsId.some(id => id.equals(user.userId)) || user.role === 'admin';
+
+        if (!canChange) {
+            return res.status(403).json({message: "Nie masz do tego uprawnień"});
+        }
+
+        topic.isClosed = true;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:closed', {topicId, message: 'Ten temat został zamknięty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (closeTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat zamknięty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd zamykania tematu", err});
+    }
+};
+
+const openTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+        const userId = req.user.userId;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (!topic.isClosed) {
+            return res.status(409).json({message: "Temat jest już otwarty"});
+        }
+
+        const isModerator = topic.ownerId.equals(userId) ||
+            topic.moderatorsId.some(id => id.equals(userId)) ||
+            req.user.role === 'admin';
+
+        if (!isModerator) {
+            return res.status(403).json({message: "Nie masz do tego uprawnień"});
+        }
+
+        topic.isClosed = false;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:opened', {topicId, message: 'Ten temat został otwarty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (openTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat otwarty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd otwierania tematu", err});
+    }
+};
+
+const hideTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+        const userId = req.user.userId;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (topic.isHidden) {
+            return res.status(409).json({message: "Temat jest już ukryty"});
+        }
+
+        const isModerator = topic.ownerId.equals(userId) ||
+            topic.moderatorsId.some(id => id.equals(userId)) ||
+            req.user.role === 'admin';
+
+        if (!isModerator) {
+            return res.status(403).json({message: "Nie masz do tego uprawnień"});
+        }
+
+        topic.isHidden = true;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:hidden', {topicId, message: 'Ten temat został ukryty'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (hideTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat ukryty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd ukrywania tematu", err});
+    }
+};
+
+const unhideTopic = async (req, res) => {
+    try {
+        const {topicId} = req.body;
+        const userId = req.user.userId;
+
+        if (!topicId) {
+            return res.status(400).json({message: "Nie podano ID tematu"});
+        }
+
+        const topic = await Topic.findById(topicId);
+
+        if (!topic) {
+            return res.status(404).json({message: "Temat nie znaleziony"});
+        }
+
+        if (!topic.isHidden) {
+            return res.status(409).json({message: "Temat nie jest ukryty"});
+        }
+
+        const isModerator = topic.ownerId.equals(userId) ||
+            topic.moderatorsId.some(id => id.equals(userId)) ||
+            req.user.role === 'admin';
+
+        if (!isModerator) {
+            return res.status(403).json({message: "Nie masz do tego uprawnień"});
+        }
+
+        topic.isHidden = false;
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:unhidden', {topicId, message: 'Ten temat jest teraz widoczny'});
+            }
+        } catch (e) {
+            console.error('WebSocket error (unhideTopic):', e);
+        }
+
+        return res.status(200).json({message: "Temat odkryty", topic});
+    } catch (err) {
+        return res.status(500).json({message: "Błąd odkrywania tematu", err});
+    }
+};
+
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, closeTopic, openTopic, hideTopic, unhideTopic };

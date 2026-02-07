@@ -14,7 +14,6 @@ const initSocket = (server) => {
 
     const userSockets = new Map();
 
-    // Middleware do autoryzacji WebSocket
     io.use((socket, next) => {
         try {
             const cookies = socket.handshake.headers.cookie;
@@ -32,7 +31,7 @@ const initSocket = (server) => {
             }
 
             const payload = jwt.verify(token, process.env.JWT_SECRET);
-            socket.userId = payload.id;
+            socket.userId = payload.userId;
             socket.role = payload.role;
             
             console.log(`Socket authenticated: userId=${socket.userId}, role=${socket.role}`);

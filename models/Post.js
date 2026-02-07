@@ -44,6 +44,4 @@ const postSchema = new Schema({
 }, {timestamps: true});
 
 
-//na przyszłość, zrób mechanizm odpowiadania innym na posty
-
 module.exports = model("Post", postSchema);
