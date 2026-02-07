@@ -55,4 +55,11 @@ const removeModerator = async (topicId, userId) => {
     return res.data;
 };
 
-export {getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
+const listTopics = async (parentId) => {
+    const res = await api.get('/topics', {
+        params: parentId ? {parentId} : {}
+    });
+    return res.data.topics;
+}
+
+export {listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};

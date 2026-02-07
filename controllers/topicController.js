@@ -193,10 +193,14 @@ const createTopic = async (req, res) => {
     }
 };
 
-const listRootTopics = async (_req, res) => {
+const listRootTopics = async (req, res) => {
     try {
-        const topics = await Topic.find({parent: null, isHidden: false})
+        const parentId = req.query.parentId;
+        const filter = {parent: parentId ? parentId : null, isHidden: false};
+
+        const topics = await Topic.find(filter)
             .populate("ownerId", "login mail")
+            .populate("tags", "name")
             .select('-bannedUsersIds');
         
         return res.status(200).json({topics});

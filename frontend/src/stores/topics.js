@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import {getTopicById, getTopicSubtree, getTopicTree, createTopic} from "../services/topicService";
+import {getTopicById, getTopicSubtree, getTopicTree, createTopic, listTopics} from "../services/topicService";
 
 const useTopicsStore = defineStore("topics", () => {
     const tree = ref([]);
@@ -13,7 +13,7 @@ const useTopicsStore = defineStore("topics", () => {
         try {
             loading.value = true;
             error.value = null;
-            tree.value = await getTopicTree();
+            tree.value = await listTopics();
         } catch (err) {
             error.value = err.message;
             console.error('Error fetching tree:', err);
@@ -34,6 +34,20 @@ const useTopicsStore = defineStore("topics", () => {
             loading.value = false;
         }
     }
+
+    const fetchChildren = async (topicId) => {
+        try {
+            loading.value = true;
+            error.value = null;
+            return await listTopics(topicId);
+        } catch (err) {
+            error.value = err.message;
+            console.error('Error fetching children:', err);
+            return [];
+        } finally {
+            loading.value = false;
+        }
+    };
 
     const fetchTopic = async (id) => {
         try {
@@ -71,7 +85,7 @@ const useTopicsStore = defineStore("topics", () => {
         }
     };
 
-    return {tree, currentTopic, permissions, loading, error, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction};
+    return {tree, currentTopic, permissions, loading, error, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction, fetchChildren};
 });
 
 export {useTopicsStore};
