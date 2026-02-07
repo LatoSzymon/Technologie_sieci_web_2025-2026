@@ -9,7 +9,22 @@ export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);
     const connected = ref(false);
     const currentTopicId = ref(null);
-    const eventListeners = ref({});
+    // const eventListeners = ref({});
+    const notifications = ref([]);
+
+    const pushNotification = (notification) => {
+        const entry = {
+            id: crypto?.randomUUID?.() || String(Date.now()),
+            ts: new Date(),
+            type: notification.type || 'info',
+            message: notification.message || 'Nowe powiadomienie'
+        };
+        notifications.value.unshift(entry);
+    };
+
+    const removeNotification = (id) => {
+        notifications.value = notifications.value.filter(n => n.id !== id);
+    };
 
     const connect = () => {
         if (socket.value?.connected) {
@@ -40,10 +55,45 @@ export const useSocketStore = defineStore('socket', () => {
             console.error('Socket connection error:', error);
         });
 
-        socket.value.on('topic:updated', () => {
-            console.log('[WebSocket] topic:updated received');
+        const refreshTopicData = (topicId) => {
             const topicsStore = useTopicsStore();
             topicsStore.fetchTree();
+            const targetId = topicId || currentTopicId.value;
+            if (targetId) {
+                topicsStore.fetchTopic(targetId);
+            }
+        };
+
+        socket.value.on('topic:updated', (data) => {
+            console.log('[WebSocket] topic:updated received', data);
+            refreshTopicData(data?.topicId);
+            if (data?.message) {
+                pushNotification({ type: 'info', message: data.message });
+            }
+        });
+
+        socket.value.on('topic:closed', (data) => {
+            console.log('[WebSocket] topic:closed received', data);
+            refreshTopicData(data?.topicId);
+            pushNotification({ type: 'warning', message: data?.message || 'Temat został zamknięty' });
+        });
+
+        socket.value.on('topic:opened', (data) => {
+            console.log('[WebSocket] topic:opened received', data);
+            refreshTopicData(data?.topicId);
+            pushNotification({ type: 'success', message: data?.message || 'Temat został otwarty' });
+        });
+
+        socket.value.on('topic:hidden', (data) => {
+            console.log('[WebSocket] topic:hidden received', data);
+            refreshTopicData(data?.topicId);
+            pushNotification({ type: 'warning', message: data?.message || 'Temat został ukryty' });
+        });
+
+        socket.value.on('topic:unhidden', (data) => {
+            console.log('[WebSocket] topic:unhidden received', data);
+            refreshTopicData(data?.topicId);
+            pushNotification({ type: 'success', message: data?.message || 'Temat jest widoczny' });
         });
 
         socket.value.on('user:blocked', (data) => {
@@ -52,7 +102,11 @@ export const useSocketStore = defineStore('socket', () => {
             if (data?.userId && data.userId === userId) {
                 console.log('[WebSocket] user:blocked received - user is blocked');
                 auth.blocked = true;
-                window.dispatchEvent(new CustomEvent('user-blocked', { detail: data }));
+                pushNotification({
+                    type: 'error',
+                    message: data?.message || 'Zostałeś zablokowany'
+                });
+                auth.logout();
             }
         });
 
@@ -62,7 +116,10 @@ export const useSocketStore = defineStore('socket', () => {
             if (data?.userId && data.userId === userId) {
                 console.log('[WebSocket] user:unblocked received');
                 auth.blocked = false;
-                window.dispatchEvent(new CustomEvent('user-unblocked', { detail: data }));
+                pushNotification({
+                    type: 'success',
+                    message: data?.message || 'Zostałeś odblokowany'
+                });
             }
         });
 
@@ -72,46 +129,50 @@ export const useSocketStore = defineStore('socket', () => {
             if (data?.userId && data.userId === userId) {
                 console.log('[WebSocket] user:approved received');
                 auth.user.isApprovedByAdmin = true;
-                window.dispatchEvent(new CustomEvent('user-approved', { detail: data }));
+                pushNotification({
+                    type: 'success',
+                    message: data?.message || 'Twoje konto zostało zaakceptowane'
+                });
             }
         });
 
         socket.value.on('post:new', (post) => {
             console.log('[WebSocket] post:new received', post);
             const postStore = usePostStore();
-            postStore.addPost(post);
+            const topicId = post.topicId?._id || post.topicId;
+            postStore.addPost(topicId, post);
         });
 
         socket.value.on('post:deleted', (data) => {
             console.log('[WebSocket] post:deleted received', data);
             const postStore = usePostStore();
-            postStore.removePost(data.postId);
+            postStore.removePost(data.topicId, data.postId);
         });
 
         socket.value.on('post:liked', (data) => {
             console.log('[WebSocket] post:liked received', data);
             const postStore = usePostStore();
-            postStore.updatePostLikes(data.postId, data.likesCount, data.liked, data.likes);
+            const topicId = data.topicId || currentTopicId.value;
+            if (topicId) {
+                postStore.updatePostLikes(topicId, data.postId, data.likesCount, data.liked, data.likes);
+            }
         });
 
         socket.value.on('admin:notify', (data) => {
-            if (!window.__adminNotifications) window.__adminNotifications = [];
-            window.__adminNotifications.push({ ...data, ts: new Date() });
-            window.dispatchEvent(new CustomEvent('admin-notify', { detail: data }));
+            pushNotification({
+                type: data?.type || 'info',
+                message: data?.message || 'Nowe powiadomienie admina'
+            });
         });
 
         socket.value.on('topic:userBlocked', (data) => {
             console.log('[WebSocket] topic:userBlocked received', data);
-            const topicsStore = useTopicsStore();
-            topicsStore.fetchTree();
-            window.dispatchEvent(new CustomEvent('topic-user-blocked', { detail: data }));
+            refreshTopicData(data?.topicId);
         });
 
         socket.value.on('topic:userUnblocked', (data) => {
             console.log('[WebSocket] topic:userUnblocked received', data);
-            const topicsStore = useTopicsStore();
-            topicsStore.fetchTree();
-            window.dispatchEvent(new CustomEvent('topic-user-unblocked', { detail: data }));
+            refreshTopicData(data?.topicId);
         });
     };
 
@@ -186,6 +247,9 @@ export const useSocketStore = defineStore('socket', () => {
         socket,
         connected,
         currentTopicId,
+        notifications,
+        pushNotification,
+        removeNotification,
         connect,
         disconnect,
         joinTopic,

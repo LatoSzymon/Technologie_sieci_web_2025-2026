@@ -117,6 +117,7 @@ const toggleLike = async (req, res) => {
                 io.to(`topic:${post.topicId}`).emit('post:liked', { 
                     postId: post._id, 
                     userId: userIdStr, 
+                    topicId: post.topicId,
                     likesCount: post.likes.length,
                     likes: normalizedLikes,
                     liked: !liked 

@@ -44,33 +44,27 @@ const initSocket = (server) => {
 
     io.on("connection", (socket) => {
         console.log(`Socket connected: ${socket.id}, user: ${socket.userId}`);
-        
-        // Zapisz socket użytkownika
+
         userSockets.set(socket.userId, socket.id);
 
-        // Dołącz do osobistego room
         socket.join(`user:${socket.userId}`);
 
-        // Jeśli admin, dołącz do room adminów
         if (socket.role === "admin") {
             socket.join("admins");
             console.log(`User ${socket.userId} joined admins room`);
         }
 
-        // Dołączanie do room tematu
         socket.on("join-topic", (topicId) => {
             socket.join(`topic:${topicId}`);
             console.log(`User ${socket.userId} joined topic:${topicId}`);
             console.log(`Rooms for socket ${socket.id}:`, Array.from(socket.rooms));
         });
 
-        // Opuszczanie room tematu
         socket.on("leave-topic", (topicId) => {
             socket.leave(`topic:${topicId}`);
             console.log(`User ${socket.userId} left topic:${topicId}`);
         });
 
-        // Admin chat
         socket.on("admin:message", ({ toUserId, message }) => {
             const targetSocketId = userSockets.get(toUserId);
             if (targetSocketId) {
