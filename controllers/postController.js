@@ -1,5 +1,6 @@
 const Post = require("../models/Post");
 const Topic = require("../models/Topic");
+const TopicParticipant = require("../models/TopicParticipant");
 const { post } = require("../routes/userRoutes");
 
 const toId = v => (v?.toString ? v.toString() : String(v));
@@ -46,6 +47,12 @@ const createPost = async (req, res) => {
         });
 
         await post.save();
+
+        await TopicParticipant.updateOne(
+            { topicId, userId: authorId },
+            { $set: { lastPostAt: new Date() } },
+            { upsert: true }
+        );
         
         await post.populate('authorId', 'login email');
         await post.populate('tags');

@@ -2,6 +2,7 @@ const Topic = require('../models/Topic');
 const User = require('../models/User');
 const Post = require("../models/Post");
 const Tag = require("../models/Tag");
+const TopicParticipant = require("../models/TopicParticipant");
 
 const getAllSubtopics = async (topicId) => {
     const topic = await Topic.findById(topicId);
@@ -677,6 +678,73 @@ const getTopicUsers = async (req, res) => {
     }
 };
 
+const getTopicParticipants = async (req, res) => {
+    try {
+        const { topicId } = req.params;
+        const currentUserId = req.user.userId;
+
+        if (!topicId) {
+            return res.status(400).json({ message: "topicId jest wymagane" });
+        }
+
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+
+        const isOwner = topic.ownerId.equals(currentUserId);
+        const isModerator = topic.moderatorsId.some(id => id.equals(currentUserId));
+        const isAdmin = req.user.role === 'admin';
+
+        if (!isOwner && !isModerator && !isAdmin) {
+            return res.status(403).json({
+                message: "Nie masz uprawnień do listy uczestników tematu"
+            });
+        }
+
+        const subtopics = await getAllSubtopics(topicId);
+        const topicIds = [topicId, ...subtopics];
+
+        const participants = await TopicParticipant.find({
+            topicId: { $in: topicIds }
+        })
+            .populate('userId', 'login mail role')
+            .lean();
+
+        const excludedIds = new Set([
+            topic.ownerId.toString(),
+            ...topic.moderatorsId.map(id => id.toString())
+        ]);
+
+        const usersMap = new Map();
+        for (const participant of participants) {
+            const user = participant.userId;
+            if (!user) continue;
+            if (user.role === 'admin') continue;
+            const userIdStr = user._id.toString();
+            if (excludedIds.has(userIdStr)) continue;
+            if (!usersMap.has(userIdStr)) {
+                usersMap.set(userIdStr, {
+                    _id: user._id,
+                    login: user.login,
+                    mail: user.mail
+                });
+            }
+        }
+
+        const users = Array.from(usersMap.values()).sort((a, b) =>
+            a.login.localeCompare(b.login, 'pl')
+        );
+
+        return res.status(200).json({ users });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Błąd przy pobieraniu uczestników tematu",
+            error
+        });
+    }
+};
+
 const closeTopic = async (req, res) => {
     try {
         const {topicId} = req.body;
@@ -855,4 +923,4 @@ const unhideTopic = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, closeTopic, openTopic, hideTopic, unhideTopic };
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic };

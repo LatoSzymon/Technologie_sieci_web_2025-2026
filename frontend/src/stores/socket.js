@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { useTopicsStore } from './topics';
 import { authStore } from '../stores/auth';
 import { usePostStore } from './posts';
+import router from '../routing';
 
 export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);
@@ -104,7 +105,7 @@ export const useSocketStore = defineStore('socket', () => {
                 auth.blocked = true;
                 pushNotification({
                     type: 'error',
-                    message: data?.message || 'Zostałeś zablokowany'
+                    message: data?.message || 'Zostałeś zablokowany w serwisie'
                 });
                 auth.logout();
             }
@@ -167,6 +168,18 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('topic:userBlocked', (data) => {
             console.log('[WebSocket] topic:userBlocked received', data);
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                pushNotification({
+                    type: 'warning',
+                    message: data?.message || 'Zostałeś zablokowany w tym temacie'
+                });
+                if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
+                    router.push('/topics');
+                }
+                return;
+            }
             refreshTopicData(data?.topicId);
         });
 

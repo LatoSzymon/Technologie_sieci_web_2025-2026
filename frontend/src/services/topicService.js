@@ -20,6 +20,11 @@ const getTopicUsers = async (id) => {
     return res.data.users;
 };
 
+const getTopicParticipants = async (id) => {
+    const res = await api.get(`/topics/${id}/participants`);
+    return res.data.users;
+};
+
 const blockUserInTopic = async ({ topicId, userId, exceptTopicIds = [] }) => {
     const res = await api.post('/topics/block-user', { topicId, userId, exceptTopicIds });
     return res.data;
@@ -62,4 +67,4 @@ const listTopics = async (parentId) => {
     return res.data.topics;
 }
 
-export {listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
+export {listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, getTopicParticipants, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
