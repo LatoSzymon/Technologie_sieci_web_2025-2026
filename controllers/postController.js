@@ -229,4 +229,32 @@ const updatePost = async (req, res) => {
     }
 }
 
-module.exports = {createPost, toggleLike, deletePost, updatePost};
+const getDeletedPosts = async (req, res) => {
+    try {
+        const {topicId} = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        if (req.user.role !== 'admin') {
+            return req.status(403).json({message: "Nie masz do tego uprawnień"});
+        }
+
+        const posts = await Post.find({topicId, isDeleted: true})
+            .sort({createdAt: -1})
+            .skip((page-1) * limit)
+            .limit(limit)
+            .populate("authorId", "login email")
+            .populate('tags');
+
+        const total = await Post.countDocuments({topicId, isDeleted: true});
+
+        return res.status(200).json({
+            posts, page, total, pages: Math.ceil(total / limit)
+        });
+
+    } catch (error) {
+        return res.status(500).json({message: "Błąd przy pobieraniu usuwanych postów", error})
+    }
+};
+
+module.exports = {createPost, toggleLike, deletePost, updatePost, getDeletedPosts};

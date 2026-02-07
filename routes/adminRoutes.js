@@ -13,9 +13,4 @@ router.post('/users/:id/block', blockUser);
 router.post('/users/:id/unblock', unblockUser);
 router.post('/users/delete', deleteUser);
 
-router.post('/topics/close', closeTopic);
-router.post('/topics/open', openTopic);
-router.post('/topics/hide', hideTopic);
-router.post('/topics/unhide', unhideTopic);
-
 module.exports = router;
