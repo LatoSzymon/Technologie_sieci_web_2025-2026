@@ -112,9 +112,16 @@ const blockUserInTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`user:${userId}`).emit('user:blocked', { userId, topicId, reason: req.body.reason || '' });
-                io.to(`topic:${topicId}`).emit('topic:userBlocked', { userId, topicId, exceptTopicIds });
-                console.log(`Emitted user:blocked to user:${userId}`);
+                io.to(`topic:${topicId}`).emit('topic:userBlocked', {
+                    userId,
+                    topicId,
+                    exceptTopicIds,
+                    topic: {
+                        _id: topic._id,
+                        bannedUsersIds: topic.bannedUsersIds,
+                        blockedUserExceptions: topic.blockedUserExceptions
+                    }
+                });
             }
         } catch (e) {
             console.error('WebSocket error (blockUser):', e);
@@ -278,9 +285,18 @@ const unblockUserInTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`user:${userId}`).emit('user:unblocked', { userId, topicId });
-                io.to(`topic:${topicId}`).emit('topic:userUnblocked', { userId, topicId });
-                console.log(`Emitted user:unblocked to user:${userId}`);
+                const payload = {
+                    userId,
+                    topicId,
+                    topic: {
+                        _id: topic._id,
+                        bannedUsersIds: topic.bannedUsersIds,
+                        blockedUserExceptions: topic.blockedUserExceptions
+                    },
+                    message: 'Zostałeś odblokowany w temacie'
+                };
+                io.to(`topic:${topicId}`).emit('topic:userUnblocked', payload);
+                io.to(`user:${userId}`).emit('topic:userUnblocked', payload);
             }
         } catch (e) {
             console.error('WebSocket error (unblockUser):', e);

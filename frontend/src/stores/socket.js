@@ -170,6 +170,11 @@ export const useSocketStore = defineStore('socket', () => {
             console.log('[WebSocket] topic:userBlocked received', data);
             const auth = authStore();
             const userId = auth.user?._id || auth.user?.id;
+            const topicsStore = useTopicsStore();
+            if (data?.topic && topicsStore.currentTopic?._id === data.topic._id) {
+                topicsStore.currentTopic.bannedUsersIds = data.topic.bannedUsersIds || [];
+                topicsStore.currentTopic.blockedUserExceptions = data.topic.blockedUserExceptions || [];
+            }
             if (data?.userId && data.userId === userId) {
                 pushNotification({
                     type: 'warning',
@@ -180,12 +185,26 @@ export const useSocketStore = defineStore('socket', () => {
                 }
                 return;
             }
-            refreshTopicData(data?.topicId);
         });
 
         socket.value.on('topic:userUnblocked', (data) => {
             console.log('[WebSocket] topic:userUnblocked received', data);
-            refreshTopicData(data?.topicId);
+            const topicsStore = useTopicsStore();
+            if (data?.topic && topicsStore.currentTopic?._id === data.topic._id) {
+                topicsStore.currentTopic.bannedUsersIds = data.topic.bannedUsersIds || [];
+                topicsStore.currentTopic.blockedUserExceptions = data.topic.blockedUserExceptions || [];
+            }
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                pushNotification({
+                    type: 'success',
+                    message: data?.message || 'Zostałeś odblokowany w tym temacie'
+                });
+                if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
+                    refreshTopicData(data.topicId);
+                }
+            }
         });
     };
 

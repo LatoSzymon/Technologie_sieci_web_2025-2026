@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../stores/topics';
 import { authStore } from '../stores/auth';
 import PostList from './PostList.vue';
-import BlockUserModal from './moderation/BlockUserModal.vue';
+import TopicParticipantsModeration from './moderation/TopicParticipantsModeration.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
 import PromoteModeratorModal from './moderation/PromoteModeratorModal.vue';
 import RemoveModeratorModal from './moderation/RemoveModeratorModal.vue';
@@ -87,7 +87,6 @@ const canRemoveModerator = computed(() => {
 	return isOwner;
 });
 
-const showBlockModal = ref(false);
 const showCreateSubtopic = ref(false);
 const showPromoteModal = ref(false);
 const showRemoveModal = ref(false);
@@ -98,7 +97,12 @@ const editForm = ref({ name: '', description: '' });
 const editError = ref('');
 const postFormRef = ref(null);
 
-const handleBlocked = () => {
+const handleBlocked = (payload) => {
+	if (payload?.bannedUsersIds && topics.currentTopic) {
+		topics.currentTopic.bannedUsersIds = payload.bannedUsersIds;
+		topics.currentTopic.blockedUserExceptions = payload.blockedUserExceptions || [];
+		return;
+	}
 	topics.fetchTopic(route.params.id);
 };
 
@@ -278,10 +282,17 @@ watch(() => topics.currentTopic, () => {
 					<div v-if="editError" class="error-message">{{ editError }}</div>
 				</div>
 				<div class="mod-buttons">
-					<button @click="showBlockModal = true" class="btn btn-block btn-warning">Blokuj</button>
 					<button @click="showPromoteModal = true" class="btn btn-block btn-info">Promuj</button>
 					<button @click="showCreateSubtopic = true" class="btn btn-block btn-primary">Stwórz podtemat</button>
 				</div>
+			</div>
+
+			<div v-if="canModerate" class="sidebar-card participants-card">
+				<TopicParticipantsModeration
+					:topic-id="topics.currentTopic._id"
+					:topic="topics.currentTopic"
+					@changed="handleBlocked"
+				/>
 			</div>
 
 			<div class="sidebar-card post-form-card">
@@ -293,13 +304,6 @@ watch(() => topics.currentTopic, () => {
 		<div v-else class="empty-message">
 			Nie znaleziono tematu.
 		</div>
-
-		<BlockUserModal 
-			:open="showBlockModal" 
-			:topic-id="topics.currentTopic?._id" 
-			@close="showBlockModal = false" 
-			@blocked="handleBlocked" 
-			@unblocked="handleBlocked" />
 
 		<PromoteModeratorModal 
 			:open="showPromoteModal" 
