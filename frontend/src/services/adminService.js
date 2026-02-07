@@ -41,22 +41,22 @@ const deleteUser = async (userId) => {
 };
 
 const closeTopic = async (topicId) => {
-  const res = await api.post('/admin/topics/close', { topicId });
+  const res = await api.post('/topics/close', { topicId });
   return res.data;
 };
 
 const openTopic = async (topicId) => {
-  const res = await api.post('/admin/topics/open', { topicId });
+  const res = await api.post('/topics/open', { topicId });
   return res.data;
 };
 
 const hideTopic = async (topicId) => {
-  const res = await api.post('/admin/topics/hide', { topicId });
+  const res = await api.post('/topics/hide', { topicId });
   return res.data;
 };
 
 const unhideTopic = async (topicId) => {
-  const res = await api.post('/admin/topics/unhide', { topicId });
+  const res = await api.post('/topics/unhide', { topicId });
   return res.data;
 };
 
