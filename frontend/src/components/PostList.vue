@@ -4,7 +4,7 @@ import { usePostStore } from '../stores/posts';
 import { useSocketStore } from '../stores/socket';
 import * as postService from '../services/postService';
 import tagService from '../services/tagService';
-import { ref, onMounted, onBeforeUnmount, watch, defineExpose, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, defineExpose, nextTick, computed } from 'vue';
 import PostItem from './PostItem.vue';
 
 const props = defineProps({ 
@@ -28,6 +28,10 @@ const emit = defineEmits(['reply']);
 const postStore = usePostStore();
 const socketStore = useSocketStore();
 
+const listRef = ref(null);
+const posts = computed(() => postStore.getPosts(props.topicId));
+const pagination = computed(() => postStore.getPagination(props.topicId));
+
 const newPostContent = ref("");
 const isAdding = ref(false);
 const addError = ref("");
@@ -37,14 +41,23 @@ const replyingToPostId = ref(null);
 const replyingToPost = ref(null);
 
 const currentPage = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(5);
 const totalPosts = ref(0);
 const totalPages = ref(0);
+const isLoadingMore = ref(false);
 
-const load = async () => {
+const load = async (page = 1, mode = 'replace') => {
     try {
-        const data = await postService.fetchPosts(props.topicId, currentPage.value, pageSize.value);
-        postStore.setPosts({ posts: data.posts || [] });
+        const data = await postService.fetchPosts(props.topicId, page, pageSize.value);
+        postStore.setPosts({
+            topicId: props.topicId,
+            posts: data.posts || [],
+            page: data.page,
+            pages: data.pages,
+            total: data.total,
+            mode
+        });
+        currentPage.value = data.page || page;
         totalPosts.value = data.total || 0;
         totalPages.value = data.pages || 0;
     } catch (err) {
@@ -52,7 +65,14 @@ const load = async () => {
     }
 }
 
-const handleNewPost = (post) => {
+const loadLastPage = async () => {
+    const lastPage = Math.max(1, Math.ceil((totalPosts.value + 1) / pageSize.value));
+    currentPage.value = lastPage;
+    await load(lastPage, 'replace');
+    await scrollToBottom();
+};
+
+const handleNewPost = async (post) => {
     console.log('Received new post:', post);
     const postTopicId = post.topicId?._id || post.topicId;
     const currentTopicId = props.topicId;
@@ -60,7 +80,14 @@ const handleNewPost = (post) => {
     console.log(`Comparing topicIds: post=${postTopicId}, current=${currentTopicId}`);
     
     if (postTopicId === currentTopicId) {
-        postStore.addPost(post);
+        if (currentPage.value === totalPages.value) {
+            postStore.addPost(props.topicId, post);
+            totalPosts.value += 1;
+            await scrollToBottom();
+        } else {
+            totalPosts.value += 1;
+            totalPages.value = Math.max(totalPages.value, Math.ceil(totalPosts.value / pageSize.value));
+        }
         console.log(' Post added to store');
     } else {
         console.log('Topic does not match, ignoring post');
@@ -75,29 +102,34 @@ const clearForm = () => {
     replyingToPost.value = null;
 };
 
-const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
-        load();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+const loadMore = async () => {
+    if (currentPage.value >= totalPages.value || isLoadingMore.value) return;
+    isLoadingMore.value = true;
+    try {
+        await load(currentPage.value + 1, 'append');
+    } finally {
+        isLoadingMore.value = false;
     }
 };
 
-const changePageSize = (newSize) => {
-    pageSize.value = newSize;
-    currentPage.value = 1; // Reset to first page
-    load();
-};
-
-const goToPreviousPage = () => {
-    if (currentPage.value > 1) {
-        goToPage(currentPage.value - 1);
+const loadRemainingPages = async () => {
+    if (isLoadingMore.value) return;
+    isLoadingMore.value = true;
+    try {
+        while (currentPage.value < totalPages.value) {
+            await load(currentPage.value + 1, 'append');
+        }
+    } finally {
+        isLoadingMore.value = false;
     }
 };
 
-const goToNextPage = () => {
-    if (currentPage.value < totalPages.value) {
-        goToPage(currentPage.value + 1);
+
+const scrollToBottom = async () => {
+    await nextTick();
+    const el = listRef.value;
+    if (el) {
+        el.scrollTop = el.scrollHeight;
     }
 };
 
@@ -113,7 +145,7 @@ const jumpToPost = async (postId) => {
 
 onMounted(() => {
     console.log('Component mounted for topic:', props.topicId);
-    load();
+    load(1, 'replace');
 
     // Załaduj tagi
     tagService.getTags().then(tags => {
@@ -151,7 +183,7 @@ watch(() => props.topicId, (newTopicId, oldTopicId) => {
         socketStore.leaveTopic(oldTopicId);
     }
     if (newTopicId) {
-        load();
+        load(1, 'replace');
         if (socketStore.connected) {
             socketStore.joinTopic(newTopicId);
         }
@@ -164,13 +196,22 @@ const addPost = async () => {
     addError.value = "";
     console.log('Sending new post to API...');
     try {
-        await postService.createPost(
+        const response = await postService.createPost(
             props.topicId,
             newPostContent.value,
             replyingToPostId.value,
             selectedTagIds.value
         );
         console.log('Post created successfully');
+        totalPosts.value += 1;
+        totalPages.value = Math.max(totalPages.value, Math.ceil(totalPosts.value / pageSize.value));
+        await loadRemainingPages();
+        const createdId = response?.post?._id || response?.post?.id;
+        if (createdId) {
+            await jumpToPost(createdId);
+        } else {
+            await scrollToBottom();
+        }
         clearForm();
     } catch (err) {
         console.error('Error creating post:', err);
@@ -215,9 +256,9 @@ defineExpose({
 <template>
     <div class="post-list-container" :class="{ 'sidebar-mode': isSidebar }">
         <!-- Lista postów (ukryta jeśli showPosts=false lub w trybie sidebar) -->
-        <div v-if="showPosts" class="posts-section">
+        <div v-if="showPosts" ref="listRef" class="posts-section">
             <PostItem 
-                v-for="post in postStore.posts" 
+                v-for="post in posts" 
                 :key="post._id || post.id" 
                 :post="post"
                 @reply="setReplyTo"
@@ -279,63 +320,21 @@ defineExpose({
             </div>
         </form>
 
-        <div v-if="showPosts && totalPages > 0" class="pagination-section">
+        <div v-if="showPosts && totalPages > 1" class="pagination-section">
             <div class="pagination-info">
-                <div class="page-size-control">
-                    <label class="page-size-label">
-                        <strong>Wpisów na stronę:</strong>
-                        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="form-select-small">
-                            <option :value="10">10</option>
-                            <option :value="20" selected>20</option>
-                            <option :value="50">50</option>
-                            <option :value="100">100</option>
-                        </select>
-                    </label>
-                </div>
                 <div class="page-counter">
-                    <small>Strona <strong>{{ currentPage }}</strong> z <strong>{{ totalPages }}</strong> (razem <strong>{{ totalPosts }}</strong> wpisów)</small>
+                    <small>Załadowano <strong>{{ posts.length }}</strong> z <strong>{{ totalPosts }}</strong> wpisów</small>
                 </div>
             </div>
-            
+
             <div class="pagination-controls">
-                <button 
-                    @click="goToPreviousPage"
-                    :disabled="currentPage === 1"
+                <button
+                    @click="loadMore"
+                    :disabled="currentPage >= totalPages || isLoadingMore"
                     class="btn-pagination"
-                    :style="{ opacity: currentPage === 1 ? 0.5 : 1 }"
+                    :style="{ opacity: currentPage >= totalPages || isLoadingMore ? 0.5 : 1 }"
                 >
-                    ← Poprzednia
-                </button>
-                
-                <div class="page-numbers">
-                    <button 
-                        v-for="page in Math.min(5, totalPages)"
-                        :key="page"
-                        @click="goToPage(page)"
-                        class="page-button"
-                        :class="{ active: page === currentPage }"
-                    >
-                        {{ page }}
-                    </button>
-                    
-                    <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
-                    
-                    <button 
-                        v-if="totalPages > 5 && currentPage > totalPages - 2"
-                        @click="goToPage(totalPages)"
-                        class="page-button"
-                    >
-                        {{ totalPages }}
-                    </button>
-                </div>
-                
-                <button 
-                    @click="goToNextPage"
-                    :disabled="currentPage === totalPages"
-                    class="btn-pagination"
-                    :style="{ opacity: currentPage === totalPages ? 0.5 : 1 }"
-                >
-                    Następna →
+                    {{ isLoadingMore ? 'Ładowanie...' : 'Załaduj więcej' }}
                 </button>
             </div>
         </div>
@@ -632,25 +631,9 @@ defineExpose({
 
 .pagination-info {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.page-size-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.page-size-label {
-    color: #ffff00;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-bottom: 15px;
 }
 
 .page-counter {
@@ -669,12 +652,10 @@ defineExpose({
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
 }
 
 .btn-pagination {
-    padding: 8px 12px;
+    padding: 10px 16px;
     background-color: #ffff00;
     color: #000;
     border: none;
@@ -690,37 +671,6 @@ defineExpose({
 .btn-pagination:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.page-numbers {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-
-.page-button {
-    padding: 6px 10px;
-    background-color: #1a1a1a;
-    color: #fff;
-    border: 1px solid #ffff00;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.page-button:hover {
-    background-color: #ffff00;
-    color: #000;
-}
-
-.page-button.active {
-    background-color: #ffff00;
-    color: #000;
-    border-color: #e6e600;
-}
-
-.pagination-ellipsis {
-    color: #999;
 }
 
 .highlight-jump {
