@@ -97,7 +97,10 @@ const replyAuthorName = computed(() => {
 
 const renderedContent = computed(() => {
   const raw = md.render(props.post.content || '');
-  return DOMPurify.sanitize(raw);
+  const withHljs = raw
+    .replace(/<pre><code class="language-/g, '<pre><code class="hljs language-')
+    .replace(/<pre><code>/g, '<pre><code class="hljs">');
+  return DOMPurify.sanitize(withHljs, { ADD_ATTR: ['class'] });
 });
 
 const isBlocking = ref(false);
@@ -141,7 +144,10 @@ const deletePost = async () => {
   error.value = '';
   try {
     await api.delete(`/posts/${postId.value}`);
-    postStore.removePost(postId.value);
+    const topicId = topics.currentTopic?._id || topics.currentTopic?.id;
+    if (topicId) {
+      postStore.removePost(topicId, postId.value);
+    }
   } catch (e) {
     error.value = e?.response?.data?.message || 'Błąd usuwania posta';
   } finally {

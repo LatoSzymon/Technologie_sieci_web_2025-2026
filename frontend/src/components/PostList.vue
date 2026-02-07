@@ -41,7 +41,7 @@ const replyingToPostId = ref(null);
 const replyingToPost = ref(null);
 
 const currentPage = ref(1);
-const pageSize = ref(5);
+const pageSize = ref(15);
 const totalPosts = ref(0);
 const totalPages = ref(0);
 const isLoadingMore = ref(false);
@@ -65,12 +65,12 @@ const load = async (page = 1, mode = 'replace') => {
     }
 }
 
-const loadLastPage = async () => {
-    const lastPage = Math.max(1, Math.ceil((totalPosts.value + 1) / pageSize.value));
-    currentPage.value = lastPage;
-    await load(lastPage, 'replace');
-    await scrollToBottom();
-};
+// const loadLastPage = async () => {
+//     const lastPage = Math.max(1, Math.ceil((totalPosts.value + 1) / pageSize.value));
+//     currentPage.value = lastPage;
+//     await load(lastPage, 'replace');
+//     await scrollToBottom();
+// };
 
 const handleNewPost = async (post) => {
     console.log('Received new post:', post);

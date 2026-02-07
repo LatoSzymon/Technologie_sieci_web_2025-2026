@@ -1,16 +1,13 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { listUnapprovedUsers, listBlockedUsers, listAllNonAdminUsers, approveUser, blockUser, unblockUser, deleteUser, closeTopic, openTopic, hideTopic, unhideTopic, getStatistics } from '../services/adminService';
 import tagService from '../services/tagService';
 import * as topicService from '../services/topicService';
 import { useSocketStore } from '../stores/socket';
 import Chat from './Chat.vue';
 
-const notifications = ref([]);
 const socketStore = useSocketStore();
-const handleNotify = (e) => {
-	notifications.value.unshift({ ...(e.detail || {}), ts: new Date() });
-};
+const notifications = computed(() => socketStore.notifications);
 
 const handleUsersUpdated = (data) => {
 	if (data.type === 'blocked' || data.type === 'unblocked') {
@@ -20,10 +17,6 @@ const handleUsersUpdated = (data) => {
 };
 
 onMounted(() => {
-	window.addEventListener('admin-notify', handleNotify);
-	if (window.__adminNotifications) {
-		notifications.value = [...window.__adminNotifications].reverse();
-	}
 	fetchPending();
 	fetchBlocked();
 	fetchAllUsers();
@@ -35,7 +28,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-	window.removeEventListener('admin-notify', handleNotify);
 	socketStore.off('admin:users-updated', handleUsersUpdated);
 });
 

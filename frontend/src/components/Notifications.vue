@@ -1,35 +1,36 @@
 <template>
   <div v-if="notifications.length" class="notifications">
-    <div v-for="(n, i) in notifications" :key="i" class="notification" :class="n.type || 'info'">
+    <div v-for="n in notifications" :key="n.id" class="notification" :class="n.type || 'info'">
       <span>{{ n.message }}</span>
-      <button @click="remove(i)" class="close-notification">X</button>
+      <button @click="remove(n.id)" class="close-notification">X</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, watch } from 'vue';
+import { useSocketStore } from '../stores/socket';
 
-const notifications = ref([]);
+const socketStore = useSocketStore();
+const notifications = computed(() => socketStore.notifications);
 
-function addNotification(n) {
-  notifications.value.push(n);
-  setTimeout(() => remove(0), 5000);
-}
+const remove = (id) => {
+  socketStore.removeNotification(id);
+};
 
-function remove(idx) {
-  notifications.value.splice(idx, 1);
-}
-
-onMounted(() => {
-  window.addEventListener('admin-notify', (e) => {
-    addNotification({ message: e.detail?.message || 'Nowa notyfikacja', type: e.detail?.type });
-  });
-});
-
-onUnmounted(() => {
-  window.removeEventListener('admin-notify', addNotification);
-});
+watch(
+  notifications,
+  (next, prev) => {
+    if (!prev) return;
+    if (next.length > prev.length) {
+      const added = next.slice(0, next.length - prev.length);
+      added.forEach(n => {
+        setTimeout(() => remove(n.id), 5000);
+      });
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>
