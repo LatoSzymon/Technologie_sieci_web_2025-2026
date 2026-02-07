@@ -1,6 +1,9 @@
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
+import DOMPurify from 'dompurify';
+import hljs from 'highlight.js';
+import MarkdownIt from 'markdown-it';
 import { useTopicsStore } from '../topics';
 import { authStore } from '../auth';
 import api from '../services/api';
@@ -10,6 +13,17 @@ import * as postService from '../services/postService';
 
 const props = defineProps({ post: Object });
 const emit = defineEmits(['blocked', 'reply', 'jump']);
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  highlight: (code, lang) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  }
+});
 
 const authorName = computed(() => {
   const author = props.post.authorId;
@@ -81,13 +95,16 @@ const replyAuthorName = computed(() => {
   return 'Anonim';
 });
 
+const renderedContent = computed(() => {
+  const raw = md.render(props.post.content || '');
+  return DOMPurify.sanitize(raw);
+});
+
 const isBlocking = ref(false);
 const isDeleting = ref(false);
 const isLiking = ref(false);
 const isEditingPost = ref(false);
 const editContent = ref('');
-const editCodeBlocks = ref([]);
-const newCodeBlock = ref({ language: 'javascript', code: '' });
 const error = ref('');
 const editError = ref('');
 
@@ -134,20 +151,7 @@ const deletePost = async () => {
 
 const initEditPost = () => {
   editContent.value = props.post.content;
-  editCodeBlocks.value = JSON.parse(JSON.stringify(props.post.codeBlocks || []));
-  newCodeBlock.value = { language: 'javascript', code: '' };
   isEditingPost.value = true;
-};
-
-const addCodeBlock = () => {
-  if (newCodeBlock.value.code.trim()) {
-    editCodeBlocks.value.push(JSON.parse(JSON.stringify(newCodeBlock.value)));
-    newCodeBlock.value = { language: 'javascript', code: '' };
-  }
-};
-
-const removeCodeBlock = (index) => {
-  editCodeBlocks.value.splice(index, 1);
 };
 
 const savePost = async () => {
@@ -160,9 +164,8 @@ const savePost = async () => {
   editError.value = '';
   
   try {
-    await postService.updatePost(postId.value, editContent.value, editCodeBlocks.value);
+    await postService.updatePost(postId.value, editContent.value);
     props.post.content = editContent.value;
-    props.post.codeBlocks = editCodeBlocks.value;
     isEditingPost.value = false;
   } catch (e) {
     editError.value = e?.response?.data?.message || 'Błąd edycji posta';
@@ -174,7 +177,6 @@ const savePost = async () => {
 const cancelEdit = () => {
   isEditingPost.value = false;
   editContent.value = '';
-  editCodeBlocks.value = [];
   editError.value = '';
 };
 
@@ -216,14 +218,7 @@ const toggleLike = async () => {
     </div>
     
     <div v-if="!isEditingPost">
-      <div class="content" v-html="post.content"></div>
-      
-      <div v-if="post.codeBlocks && post.codeBlocks.length" class="code-blocks">
-        <div v-for="(block, idx) in post.codeBlocks" :key="idx" class="code-block">
-          <div class="code-lang">{{ block.language }}</div>
-          <pre><code :class="`hljs language-${block.language}`">{{ block.code }}</code></pre>
-        </div>
-      </div>
+      <div class="content" v-html="renderedContent"></div>
     </div>
     
     <div v-else class="edit-section">
@@ -232,46 +227,6 @@ const toggleLike = async () => {
         <div class="form-group">
           <label class="form-label">Treść:</label>
           <textarea v-model="editContent" class="textarea-edit" placeholder="Wpisz treść posta..."></textarea>
-        </div>
-        
-        <div v-if="editCodeBlocks.length" class="existing-code-blocks">
-          <h5>Istniejące bloki kodu</h5>
-          <div v-for="(block, idx) in editCodeBlocks" :key="`edit-${idx}`" class="code-block-edit">
-            <div class="code-block-header">
-              <span class="language-badge">{{ block.language }}</span>
-              <button @click="removeCodeBlock(idx)" class="btn-remove-code" title="Usuń blok">✕</button>
-            </div>
-            <pre><code>{{ block.code }}</code></pre>
-          </div>
-        </div>
-        
-        <div class="add-code-block-section">
-          <h5>Dodaj nowy blok kodu</h5>
-          <div class="code-block-form">
-            <div class="form-group">
-              <label class="form-label">Język:</label>
-              <select v-model="newCodeBlock.language" class="select-language">
-                <option>javascript</option>
-                <option>python</option>
-                <option>html</option>
-                <option>css</option>
-                <option>java</option>
-                <option>cpp</option>
-                <option>csharp</option>
-                <option>php</option>
-                <option>ruby</option>
-                <option>go</option>
-                <option>rust</option>
-                <option>sql</option>
-                <option>bash</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Kod:</label>
-              <textarea v-model="newCodeBlock.code" class="textarea-code" placeholder="Wpisz kod..."></textarea>
-            </div>
-            <button @click="addCodeBlock" class="btn-add-code">+ Dodaj blok kodu</button>
-          </div>
         </div>
         
         <div v-if="editError" class="error-message">
@@ -342,39 +297,6 @@ const toggleLike = async () => {
   margin-bottom: 0.5rem;
 }
 
-.code-blocks {
-  margin: 1rem 0;
-  border-top: 1px solid #eee;
-  padding-top: 1rem;
-}
-
-.code-block {
-  margin-bottom: 1rem;
-  background: #322f2f;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.code-lang {
-  background: #333;
-  color: rgb(4, 255, 0);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.code-block pre {
-  margin: 0;
-  padding: 1rem;
-  overflow-x: auto;
-  background: #3ae601;
-}
-
-.code-block code {
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-}
-
 .actions button {
   margin-left: 4px;
   margin-top: 4px;
@@ -382,20 +304,6 @@ const toggleLike = async () => {
   background-color: black;
   border: 3px solid yellow;
   color: yellow;
-}
-
-.code-block-edit {
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  background: yellow;
-  border: 1px solid yellow;
-  border-radius: 4px;
-}
-
-.code-block-edit pre {
-  background: #f5f5f5;
-  padding: 0.5rem;
-  overflow-x: auto;
 }
 
 .edit-section {
@@ -422,9 +330,7 @@ const toggleLike = async () => {
   margin-bottom: 16px;
 }
 
-.textarea-edit,
-.textarea-code,
-.select-language {
+.textarea-edit {
   width: 100%;
   padding: 10px 12px;
   background-color: #0a0a0a;
@@ -438,110 +344,15 @@ const toggleLike = async () => {
   font-family: inherit;
 }
 
-.textarea-edit:focus,
-.textarea-code:focus,
-.select-language:focus {
+.textarea-edit:focus {
   outline: none;
   border-color: rgb(238, 255, 0);
   background-color: #1a1a1a;
   box-shadow: 0 0 8px rgba(238, 255, 0, 0.2);
 }
 
-.textarea-edit::placeholder,
-.textarea-code::placeholder {
+.textarea-edit::placeholder {
   color: rgba(238, 255, 0, 0.4);
-}
-
-.select-language option {
-  background-color: #2d2d2d;
-  color: #ddd;
-}
-
-.existing-code-blocks {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(238, 255, 0, 0.2);
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.existing-code-blocks h5 {
-  margin: 0 0 12px 0;
-  color: rgb(238, 255, 0);
-  font-size: 0.95em;
-}
-
-.code-block-edit {
-  background-color: #0a0a0a;
-  border: 1px solid rgba(238, 255, 0, 0.15);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.code-block-edit:last-child {
-  margin-bottom: 0;
-}
-
-.code-block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #1a1a1a;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(238, 255, 0, 0.2);
-}
-
-.language-badge {
-  color: rgb(238, 255, 0);
-  font-weight: bold;
-  font-size: 0.85em;
-  text-transform: uppercase;
-}
-
-.btn-remove-code {
-  background: none;
-  border: none;
-  color: #ff6b6b;
-  cursor: pointer;
-  font-size: 1.1em;
-  padding: 0 4px;
-  transition: all 0.2s ease;
-}
-
-.btn-remove-code:hover {
-  color: #ff4444;
-  transform: scale(1.2);
-}
-
-.code-block-edit pre {
-  margin: 0;
-  padding: 12px;
-  color: #ddd;
-  font-size: 0.85em;
-  overflow-x: auto;
-}
-
-.code-block-edit code {
-  color: #4ade80;
-}
-
-.add-code-block-section {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(238, 255, 0, 0.2);
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.add-code-block-section h5 {
-  margin: 0 0 12px 0;
-  color: rgb(238, 255, 0);
-  font-size: 0.95em;
-}
-
-.code-block-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .form-group {
@@ -550,24 +361,6 @@ const toggleLike = async () => {
   gap: 6px;
 }
 
-.btn-add-code {
-  padding: 10px 16px;
-  background-color: #22c55e;
-  color: #000;
-  border: 2px solid #22c55e;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9em;
-  font-family: inherit;
-}
-
-.btn-add-code:hover {
-  background-color: #16a34a;
-  border-color: #16a34a;
-  transform: translateY(-2px);
-}
 
 .edit-actions {
   display: flex;

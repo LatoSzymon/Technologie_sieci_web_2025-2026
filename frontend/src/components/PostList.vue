@@ -4,7 +4,6 @@ import { usePostStore } from '../posts';
 import { useSocketStore } from '../stores/socket';
 import * as postService from '../services/postService';
 import tagService from '../services/tagService';
-import api from '../services/api';
 import { ref, onMounted, onBeforeUnmount, watch, defineExpose, nextTick } from 'vue';
 import PostItem from './PostItem.vue';
 
@@ -30,11 +29,8 @@ const postStore = usePostStore();
 const socketStore = useSocketStore();
 
 const newPostContent = ref("");
-const newCodeBlocks = ref([]);
-const newCodeBlock = ref({ language: 'javascript', code: '' });
 const isAdding = ref(false);
 const addError = ref("");
-const showCodeForm = ref(false);
 const selectedTagIds = ref([]);
 const availableTags = ref([]);
 const replyingToPostId = ref(null);
@@ -71,23 +67,9 @@ const handleNewPost = (post) => {
     }
 };
 
-const addCodeBlock = () => {
-    if (newCodeBlock.value.code.trim()) {
-        newCodeBlocks.value.push(JSON.parse(JSON.stringify(newCodeBlock.value)));
-        newCodeBlock.value = { language: 'javascript', code: '' };
-    }
-};
-
-const removeCodeBlock = (index) => {
-    newCodeBlocks.value.splice(index, 1);
-};
-
 const clearForm = () => {
     newPostContent.value = "";
-    newCodeBlocks.value = [];
-    newCodeBlock.value = { language: 'javascript', code: '' };
     selectedTagIds.value = [];
-    showCodeForm.value = false;
     addError.value = "";
     replyingToPostId.value = null;
     replyingToPost.value = null;
@@ -184,9 +166,8 @@ const addPost = async () => {
     try {
         // Send the content without adding mention - that's only for display
         await postService.createPost(
-            props.topicId, 
-            newPostContent.value, 
-            newCodeBlocks.value,
+            props.topicId,
+            newPostContent.value,
             replyingToPostId.value,
             selectedTagIds.value
         );
@@ -286,72 +267,6 @@ defineExpose({
                         {{ availableTags.find(t => t._id === tagId)?.name }}
                     </span>
                 </div>
-            </div>
-            
-            <div v-if="newCodeBlocks.length" class="existing-codes">
-                <h4>Bloki kodu ({{ newCodeBlocks.length }})</h4>
-                <div v-for="(block, idx) in newCodeBlocks" :key="`add-${idx}`" class="code-block-item">
-                    <span><strong>{{ block.language }}</strong> - {{ block.code.split('\n').length }} linii</span>
-                    <button 
-                        type="button"
-                        @click="removeCodeBlock(idx)"
-                        class="btn-remove-code"
-                    >
-                        X
-                    </button>
-                </div>
-            </div>
-            
-            <div v-if="showCodeForm" class="code-form">
-                <h4>Dodaj blok kodu</h4>
-                <div class="form-group">
-                    <label class="form-label">Język:</label>
-                    <select v-model="newCodeBlock.language" class="form-select">
-                        <option value="javascript">JavaScript</option>
-                        <option value="python">Python</option>
-                        <option value="java">Java</option>
-                        <option value="cpp">C++</option>
-                        <option value="csharp">C#</option>
-                        <option value="html">HTML</option>
-                        <option value="css">CSS</option>
-                        <option value="sql">SQL</option>
-                        <option value="bash">Bash</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Kod:</label>
-                    <textarea 
-                        v-model="newCodeBlock.code" 
-                        class="form-textarea"
-                        placeholder="Wklej kod tutaj..."
-                    ></textarea>
-                </div>
-                <div class="code-form-actions">
-                    <button 
-                        type="button"
-                        @click="addCodeBlock"
-                        class="btn btn-success"
-                    >
-                        Dodaj kod
-                    </button>
-                    <button 
-                        type="button"
-                        @click="showCodeForm = false"
-                        class="btn btn-secondary"
-                    >
-                        Zamknij
-                    </button>
-                </div>
-            </div>
-            
-            <div v-if="!showCodeForm" class="form-group">
-                <button 
-                    type="button"
-                    @click="showCodeForm = true"
-                    class="btn btn-info"
-                >
-                    Dodaj kod
-                </button>
             </div>
             
             <div v-if="addError" class="error-message">
@@ -628,61 +543,6 @@ defineExpose({
     border: 1px solid #ffff00;
 }
 
-.existing-codes {
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 15px;
-    border-radius: 4px;
-}
-
-.existing-codes h4 {
-    color: #ffff00;
-    margin-top: 0;
-}
-
-.code-block-item {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(255, 255, 0, 0.05);
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.code-block-item span {
-    color: #ddd;
-}
-
-.btn-remove-code {
-    background-color: yellow;
-    color: rgb(0, 0, 0);
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    margin-left: 10px;
-}
-
-
-.code-form {
-    background-color: #2d2d2d;
-    border: 1px solid #ffff00;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.code-form h4 {
-    color: #ffff00;
-    margin-top: 0;
-}
-
-.code-form-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
 
 /* Przyciski */
 .form-actions {

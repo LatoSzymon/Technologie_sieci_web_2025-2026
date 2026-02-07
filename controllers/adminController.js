@@ -171,4 +171,4 @@ const deleteUser = async (req, res) => {
 };
 
 
-module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser, listBlockedUsers, listAllNonAdminUsers, closeTopic, openTopic, hideTopic, unhideTopic, deleteUser};
+module.exports = {listRegisteredButNotAcceptedUsers, blockUser, unblockUser, approveUser, listBlockedUsers, listAllNonAdminUsers, deleteUser};

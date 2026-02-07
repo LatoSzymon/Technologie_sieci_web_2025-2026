@@ -16,7 +16,7 @@ const isUserBlockedInTopic = (topic, userId) => {
 
 const createPost = async (req, res) => {
     try {
-        const {topicId, content, codeBlocks, replyTo, tags} = req.body;
+        const {topicId, content, replyTo, tags} = req.body;
         const authorId = req.user.userId;
 
         if (!topicId || !content) {
@@ -38,16 +38,15 @@ const createPost = async (req, res) => {
         }
 
         const post = new Post({
-            topicId, 
-            authorId, 
-            content, 
-            codeBlocks: codeBlocks || [],
+            topicId,
+            authorId,
+            content,
             replyTo: replyTo || null,
             tags: tags || []
         });
 
         await post.save();
-
+        
         await post.populate('authorId', 'login email');
         await post.populate('tags');
         if (replyTo) {
@@ -184,7 +183,7 @@ const deletePost = async (req, res) => {
 const updatePost = async (req, res) => {
     try {
         const {postId} = req.params;
-        const {content, codeBlocks} = req.body;
+        const {content} = req.body;
         const userId = req.user.userId;
         const userRole = req.user.role;
 
@@ -203,9 +202,6 @@ const updatePost = async (req, res) => {
         }
 
         post.content = content;
-        if (codeBlocks) {
-            post.codeBlocks = codeBlocks;
-        }
 
         await post.save();
         await post.populate('authorId', 'login email');

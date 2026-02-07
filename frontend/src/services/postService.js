@@ -5,21 +5,19 @@ const fetchPosts = async (topicId, page = 1, limit = 20) => {
     return res.data;
 };
 
-const createPost = async (topicId, content, codeBlocks = [], replyTo = null, tags = []) => {
+const createPost = async (topicId, content, replyTo = null, tags = []) => {
     const res = await api.post('/posts', {
         topicId,
         content,
-        codeBlocks,
         replyTo,
         tags
     });
     return res.data;
 };
 
-const updatePost = async (postId, content, codeBlocks = []) => {
+const updatePost = async (postId, content) => {
     const res = await api.put(`/posts/${postId}`, {
-        content,
-        codeBlocks
+        content
     });
     return res.data;
 };

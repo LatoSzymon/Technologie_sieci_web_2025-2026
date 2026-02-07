@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {isAdmin, isApproved} = require("../middleware/authMiddleware");
-const {listRegisteredButNotAcceptedUsers, approveUser, blockUser, unblockUser, listBlockedUsers, listAllNonAdminUsers, closeTopic, openTopic, hideTopic, unhideTopic, deleteUser} = require("../controllers/adminController");
+const {listRegisteredButNotAcceptedUsers, approveUser, blockUser, unblockUser, listBlockedUsers, listAllNonAdminUsers, deleteUser} = require("../controllers/adminController");
 const passport = require('../passport');
 
 router.use(passport.authenticate('jwt', { session: false }), isApproved, isAdmin);
