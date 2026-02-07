@@ -4,10 +4,10 @@ import { computed, ref } from 'vue';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import MarkdownIt from 'markdown-it';
-import { useTopicsStore } from '../topics';
-import { authStore } from '../auth';
+import { useTopicsStore } from '../stores/topics';
+import { authStore } from '../stores/auth';
 import api from '../services/api';
-import { usePostStore } from '../posts';
+import { usePostStore } from '../stores/posts';
 import { blockUser as globalBlockUser } from '../services/adminService';
 import * as postService from '../services/postService';
 

@@ -53,7 +53,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useTopicsStore } from '../topics';
+import { useTopicsStore } from '../stores/topics';
 import tagService from '../services/tagService';
 
 const props = defineProps({

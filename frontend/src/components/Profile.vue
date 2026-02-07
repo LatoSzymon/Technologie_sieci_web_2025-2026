@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
-import { authStore } from '../auth';
+import { authStore } from '../stores/auth';
 import * as userService from '../services/userService';
 
 const auth = authStore();

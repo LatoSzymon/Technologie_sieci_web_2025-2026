@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getMe, logoutMe } from './services/authService';
-import { useSocketStore } from './stores/socket';
+import { getMe, logoutMe } from '../services/authService';
+import { useSocketStore } from '../stores/socket';
 
 const authStore = defineStore('auth', () => {
     const user = ref(null);

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useSocketStore } from '../stores/socket';
-import { authStore } from '../auth';
+import { authStore } from '../stores/auth';
 
 import { listAllUsers } from '../services/userService';
 

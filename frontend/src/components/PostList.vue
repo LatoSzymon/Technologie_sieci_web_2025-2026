@@ -1,6 +1,6 @@
 
 <script setup>
-import { usePostStore } from '../posts';
+import { usePostStore } from '../stores/posts';
 import { useSocketStore } from '../stores/socket';
 import * as postService from '../services/postService';
 import tagService from '../services/tagService';
@@ -164,7 +164,6 @@ const addPost = async () => {
     addError.value = "";
     console.log('Sending new post to API...');
     try {
-        // Send the content without adding mention - that's only for display
         await postService.createPost(
             props.topicId,
             newPostContent.value,

@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import {getTopicById, getTopicSubtree, getTopicTree, createTopic} from "./services/topicService";
+import {getTopicById, getTopicSubtree, getTopicTree, createTopic} from "../services/topicService";
 
 const useTopicsStore = defineStore("topics", () => {
     const tree = ref([]);

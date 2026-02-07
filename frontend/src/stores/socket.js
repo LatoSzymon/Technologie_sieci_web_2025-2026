@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { io } from 'socket.io-client';
-import { useTopicsStore } from '../topics';
-import { authStore } from '../auth';
-import { usePostStore } from '../posts';
+import { useTopicsStore } from './topics';
+import { authStore } from '../stores/auth';
+import { usePostStore } from './posts';
 
 export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);

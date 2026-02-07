@@ -1,8 +1,8 @@
 <script setup>
 import { onMounted, watch, computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTopicsStore } from '../topics';
-import { authStore } from '../auth';
+import { useTopicsStore } from '../stores/topics';
+import { authStore } from '../stores/auth';
 import PostList from './PostList.vue';
 import BlockUserModal from './moderation/BlockUserModal.vue';
 import CreateTopicModal from './CreateTopicModal.vue';

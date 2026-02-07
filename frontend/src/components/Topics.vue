@@ -3,7 +3,7 @@
 
 
 import { onMounted, computed, ref } from 'vue';
-import { useTopicsStore } from '../topics';
+import { useTopicsStore } from '../stores/topics';
 import TopicNode from './TopicNode.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
 import { useRouter } from 'vue-router';

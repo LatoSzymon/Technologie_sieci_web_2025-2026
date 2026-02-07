@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useTopicsStore } from '../../topics';
+import { useTopicsStore } from '../../stores/topics';
 import * as topicService from '../../services/topicService';
 
 const props = defineProps({

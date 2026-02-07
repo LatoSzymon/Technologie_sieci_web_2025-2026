@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { authStore } from '../auth';
+import { authStore } from '../stores/auth';
 import { closeTopic, openTopic, hideTopic, unhideTopic } from '../services/adminService';
 
 const props = defineProps({

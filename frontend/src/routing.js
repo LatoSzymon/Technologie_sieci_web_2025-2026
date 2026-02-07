@@ -3,7 +3,7 @@ import Login from './components/Login.vue';
 import Register from './components/Register.vue';
 import PendingApproval from "./components/PendingApproval.vue";
 import AdminDashboard from "./components/AdminDashboard.vue";
-import { authStore } from "./auth";
+import { authStore } from "./stores/auth";
 import Home from "./components/Home.vue";
 import Topics from "./components/Topics.vue";
 import TopicView from "./components/TopicView.vue";

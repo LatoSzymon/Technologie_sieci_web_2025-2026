@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
-import { authStore } from './auth';
-import { computed, onMounted, onBeforeUnmount } from 'vue';
+import { authStore } from './stores/auth';
+import {onMounted, onBeforeUnmount } from 'vue';
 import Notifications from './components/Notifications.vue';
 
 const auth = authStore();
