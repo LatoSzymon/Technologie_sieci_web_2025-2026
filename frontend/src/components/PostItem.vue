@@ -9,7 +9,7 @@ import { blockUser as globalBlockUser } from '../services/adminService';
 import * as postService from '../services/postService';
 
 const props = defineProps({ post: Object });
-const emit = defineEmits(['blocked', 'reply']);
+const emit = defineEmits(['blocked', 'reply', 'jump']);
 
 const authorName = computed(() => {
   const author = props.post.authorId;
@@ -205,11 +205,14 @@ const toggleLike = async () => {
 </script>
 
 <template>
-  <div class="post">
+  <div class="post" :id="`post-${postId}`">
     <div class="author">{{ authorName }}</div>
     
-    <div v-if="replyToPost" class="reply-indicator">
-      <small class="reply-text">W odpowiedzi na post od <strong>{{ replyAuthorName }}</strong>: "{{ replyToPost.content.substring(0, 80) }}{{ replyToPost.content.length > 80 ? '...' : '' }}"</small>
+    <div v-if="replyToPost" class="reply-indicator">  
+      <small class="reply-text">W odpowiedzi na post od <strong>{{ replyAuthorName }}</strong>: "{{ replyToPost.content.substring(0, 50) }}{{ replyToPost.content.length > 50 ? '...' : '' }}"</small>
+      <button class="btn-jump" @click="emit('jump', replyToPost._id || replyToPost.id)">
+        Przejdź
+      </button>
     </div>
     
     <div v-if="!isEditingPost">

@@ -5,7 +5,7 @@ import { useSocketStore } from '../stores/socket';
 import * as postService from '../services/postService';
 import tagService from '../services/tagService';
 import api from '../services/api';
-import { ref, onMounted, onBeforeUnmount, watch, defineExpose } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, defineExpose, nextTick } from 'vue';
 import PostItem from './PostItem.vue';
 
 const props = defineProps({ 
@@ -119,6 +119,16 @@ const goToNextPage = () => {
     }
 };
 
+const jumpToPost = async (postId) => {
+    await nextTick();
+    const elemel = document.getElementById(`post-${postId}`);
+    if (elemel) {
+        elemel.scrollIntoView({behavior: "smooth", block: "center"});
+        elemel.classList.add('highlight-jump');
+        setTimeout(() => elemel.classList.remove('hightlight-jump'), 200);
+    }
+}
+
 onMounted(() => {
     console.log('Component mounted for topic:', props.topicId);
     load();
@@ -231,6 +241,7 @@ defineExpose({
                 :key="post._id || post.id" 
                 :post="post"
                 @reply="setReplyTo"
+                @jump="jumpToPost"
             />
         </div>
 
@@ -851,5 +862,10 @@ defineExpose({
 
 .pagination-ellipsis {
     color: #999;
+}
+
+.highlight-jump {
+    outline: 2px solid #ffff00;
+    transition: outline 0.3s;
 }
 </style>
