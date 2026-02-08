@@ -27,6 +27,13 @@ export const useSocketStore = defineStore('socket', () => {
         notifications.value = notifications.value.filter(n => n.id !== id);
     };
 
+    const isViewingTopic = (topicId) => {
+        if (!topicId) return false;
+        if (currentTopicId.value === topicId) return true;
+        const currentPath = router.currentRoute.value?.path || '';
+        return currentPath === `/topics/${topicId}`;
+    };
+
     const connect = () => {
         if (socket.value?.connected) {
             console.log('Socket already connected');
@@ -76,25 +83,34 @@ export const useSocketStore = defineStore('socket', () => {
         socket.value.on('topic:closed', (data) => {
             console.log('[WebSocket] topic:closed received', data);
             refreshTopicData(data?.topicId);
-            pushNotification({ type: 'warning', message: data?.message || 'Temat został zamknięty' });
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({ type: 'warning', message: data?.message || 'Temat został zamknięty' });
+            }
         });
 
         socket.value.on('topic:opened', (data) => {
             console.log('[WebSocket] topic:opened received', data);
             refreshTopicData(data?.topicId);
-            pushNotification({ type: 'success', message: data?.message || 'Temat został otwarty' });
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({ type: 'success', message: data?.message || 'Temat został otwarty' });
+            }
         });
 
         socket.value.on('topic:hidden', (data) => {
             console.log('[WebSocket] topic:hidden received', data);
             refreshTopicData(data?.topicId);
-            pushNotification({ type: 'warning', message: data?.message || 'Temat został ukryty' });
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({ type: 'warning', message: data?.message || 'Temat został ukryty' });
+                router.push('/topics');
+            }
         });
 
         socket.value.on('topic:unhidden', (data) => {
             console.log('[WebSocket] topic:unhidden received', data);
             refreshTopicData(data?.topicId);
-            pushNotification({ type: 'success', message: data?.message || 'Temat jest widoczny' });
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({ type: 'success', message: data?.message || 'Temat został odkryty' });
+            }
         });
 
         socket.value.on('user:blocked', (data) => {
@@ -180,7 +196,7 @@ export const useSocketStore = defineStore('socket', () => {
                     type: 'warning',
                     message: data?.message || 'Zostałeś zablokowany w tym temacie'
                 });
-                if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
+                if (isViewingTopic(data?.topicId)) {
                     router.push('/topics');
                 }
                 return;

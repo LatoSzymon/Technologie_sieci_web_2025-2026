@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { authStore } from '../stores/auth';
 import { useTopicsStore } from '../stores/topics';
 import { closeTopic, openTopic, hideTopic, unhideTopic } from '../services/adminService';
+import { useSocketStore } from '../stores/socket';
 
+const socketStore = useSocketStore();
 const props = defineProps({
   node: { type: Object, required: true }
 });
@@ -66,6 +68,27 @@ const toggleChildren = async (e) => {
   childrenVisible.value = !childrenVisible.value;
 };
 
+const refreshChildren = async () => {
+  if (!childrenLoaded.value) {
+    return
+  }
+
+  try {
+    childrenLoading.value = true;
+    childrenError.value = '';
+    children.value = await topics.fetchChildren(props.node._id);
+  } catch (err) {
+    childrenError.value = 'Nie udało się pobrać podtematów';
+  } finally {
+    childrenLoading.value = false;
+  }
+}
+
+const handleRefresh = async () => {
+  await refreshChildren();
+  emit("refresh");
+}
+
 const selectNode = () => {
   emit("select", props.node._id);
 };
@@ -121,6 +144,28 @@ const handleUnhideTopic = async (e) => {
     console.error(err);
   }
 };
+
+const handleTopicSync = () => {
+  if (childrenVisible.value) {
+    refreshChildren();
+  }
+};
+
+onMounted(() => {
+  socketStore.on('topic:updated', handleTopicSync);
+  socketStore.on('topic:closed', handleTopicSync);
+  socketStore.on('topic:opened', handleTopicSync);
+  socketStore.on('topic:hidden', handleTopicSync);
+  socketStore.on('topic:unhidden', handleTopicSync);
+});
+
+onBeforeUnmount(() => {
+  socketStore.off('topic:updated', handleTopicSync);
+  socketStore.off('topic:closed', handleTopicSync);
+  socketStore.off('topic:opened', handleTopicSync);
+  socketStore.off('topic:hidden', handleTopicSync);
+  socketStore.off('topic:unhidden', handleTopicSync);
+});
 </script>
 
 <template>
@@ -188,7 +233,7 @@ const handleUnhideTopic = async (e) => {
         :key="child._id"
         :node="child"
         @select="$emit('select', $event)"
-        @refresh="$emit('refresh')"
+        @refresh="handleRefresh"
       />
     </div>
   </div>
