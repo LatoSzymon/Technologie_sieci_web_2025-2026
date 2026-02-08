@@ -68,22 +68,77 @@ export const useSocketStore = defineStore('socket', () => {
             console.error('Socket connection error:', error);
         });
 
-        const refreshTopicData = (topicId) => {
+        const syncTopicState = async (data, { action } = {}) => {
             const topicsStore = useTopicsStore();
-            if (topicsStore.refreshRoot) {
-                topicsStore.refreshRoot();
-            } else {
-                topicsStore.fetchTree();
+            const topic = data?.topic;
+            const topicId = topic?._id || data?.topicId || currentTopicId.value;
+
+            if (topic) {
+                const hasOnlyTagIds = Array.isArray(topic.tags)
+                    && topic.tags.length > 0
+                    && topic.tags.every(tag => typeof tag === 'string');
+
+                topicsStore.upsertTopicInTree(topic);
+                topicsStore.mergeCurrentTopic(topic);
+
+                if (hasOnlyTagIds) {
+                    try {
+                        const fetched = await topicsStore.fetchTopicData(topicId);
+                        if (fetched) {
+                            topicsStore.upsertTopicInTree(fetched);
+                            topicsStore.mergeCurrentTopic(fetched);
+                        }
+                    } catch (err) {
+                        console.warn('Failed to hydrate topic tags:', err);
+                    }
+                }
+                return;
             }
-            const targetId = topicId || currentTopicId.value;
-            if (targetId) {
-                topicsStore.fetchTopic(targetId);
+
+            if (!topicId) return;
+
+            if (action === 'closed' || action === 'opened') {
+                const isClosed = action === 'closed';
+                topicsStore.updateTopicInTree({ _id: topicId, isClosed });
+                topicsStore.mergeCurrentTopic({ _id: topicId, isClosed });
+                return;
+            }
+
+            if (action === 'hidden' || action === 'unhidden') {
+                const isHidden = action === 'hidden';
+                topicsStore.updateTopicInTree({ _id: topicId, isHidden });
+                topicsStore.mergeCurrentTopic({ _id: topicId, isHidden });
+
+                if (action === 'hidden') {
+                    try {
+                        const fetched = await topicsStore.fetchTopicData(topicId);
+                        if (fetched) {
+                            topicsStore.upsertTopicInTree(fetched);
+                            topicsStore.mergeCurrentTopic(fetched);
+                        }
+                    } catch (err) {
+                        topicsStore.removeTopicFromTree(topicId);
+                    }
+                    return;
+                }
+            }
+
+            try {
+                const fetched = await topicsStore.fetchTopicData(topicId);
+                if (fetched) {
+                    topicsStore.upsertTopicInTree(fetched);
+                    topicsStore.mergeCurrentTopic(fetched);
+                }
+            } catch (err) {
+                if (action === 'hidden') {
+                    topicsStore.removeTopicFromTree(topicId);
+                }
             }
         };
 
         socket.value.on('topic:updated', (data) => {
             console.log('[WebSocket] topic:updated received', data);
-            refreshTopicData(data?.topicId);
+            syncTopicState(data, { action: data?.action });
             if (data?.message) {
                 pushNotification({ type: 'info', message: data.message });
             }
@@ -91,7 +146,7 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('topic:closed', (data) => {
             console.log('[WebSocket] topic:closed received', data);
-            refreshTopicData(data?.topicId);
+            syncTopicState(data, { action: 'closed' });
             if (isViewingTopic(data?.topicId)) {
                 pushNotification({ type: 'warning', message: data?.message || 'Temat został zamknięty' });
             }
@@ -99,7 +154,7 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('topic:opened', (data) => {
             console.log('[WebSocket] topic:opened received', data);
-            refreshTopicData(data?.topicId);
+            syncTopicState(data, { action: 'opened' });
             if (isViewingTopic(data?.topicId)) {
                 pushNotification({ type: 'success', message: data?.message || 'Temat został otwarty' });
             }
@@ -107,7 +162,7 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('topic:hidden', (data) => {
             console.log('[WebSocket] topic:hidden received', data);
-            refreshTopicData(data?.topicId);
+            syncTopicState(data, { action: 'hidden' });
             if (isViewingTopic(data?.topicId)) {
                 pushNotification({ type: 'warning', message: data?.message || 'Temat został ukryty' });
                 leaveTopic(data?.topicId);
@@ -119,7 +174,7 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('topic:unhidden', (data) => {
             console.log('[WebSocket] topic:unhidden received', data);
-            refreshTopicData(data?.topicId);
+            syncTopicState(data, { action: 'unhidden' });
             if (isViewingTopic(data?.topicId)) {
                 pushNotification({ type: 'success', message: data?.message || 'Temat został odkryty' });
             }
@@ -273,7 +328,7 @@ export const useSocketStore = defineStore('socket', () => {
                 pushNotification({ type: 'success', message: data.message });
             }
             if (data?.topicId) {
-                refreshTopicData(data.topicId);
+                syncTopicState({ topicId: data.topicId }, { action: 'moderators' });
             }
         });
 
@@ -282,20 +337,20 @@ export const useSocketStore = defineStore('socket', () => {
                 pushNotification({ type: 'warning', message: data.message });
             }
             if (data?.topicId) {
-                refreshTopicData(data.topicId);
+                syncTopicState({ topicId: data.topicId }, { action: 'moderators' });
             }
         });
 
         socket.value.on('topic:moderatorAdded', (data) => {
             if (data?.topicId) {
-                refreshTopicData(data.topicId);
+                syncTopicState({ topicId: data.topicId }, { action: 'moderators' });
             }
             pushNotification({ type: 'info', message: 'Dodano moderatora' });
         });
 
         socket.value.on('topic:moderatorRemoved', (data) => {
             if (data?.topicId) {
-                refreshTopicData(data.topicId);
+                syncTopicState({ topicId: data.topicId }, { action: 'moderators' });
             }
             pushNotification({ type: 'warning', message: 'Usunieto moderatora' });
         });

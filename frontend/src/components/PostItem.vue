@@ -238,7 +238,11 @@ const cancelEdit = () => {
 const toggleLike = async () => {
   isLiking.value = true;
   error.value = '';
+  const previousLikes = Array.isArray(props.post.likes) ? [...props.post.likes] : [];
   try {
+    if (!Array.isArray(props.post.likes)) {
+      props.post.likes = [];
+    }
     if (hasLiked.value) {
       props.post.likes = props.post.likes.filter(id => normalizeId(id) !== currentUserId.value);
     } else {
@@ -253,7 +257,7 @@ const toggleLike = async () => {
     }
   } catch (e) {
     error.value = e?.response?.data?.message || 'Błąd like\'owania posta';
-    window.location.reload();
+    props.post.likes = previousLikes;
   } finally {
     isLiking.value = false;
   }

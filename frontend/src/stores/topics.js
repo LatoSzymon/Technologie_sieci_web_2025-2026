@@ -10,6 +10,127 @@ const useTopicsStore = defineStore("topics", () => {
     const error = ref(null);
     const rootPagination = ref({ page: 1, pages: 1, total: 0, limit: 20 });
 
+    const normalizeTopicId = (value) => {
+        if (!value) return null;
+        if (typeof value === 'object') {
+            return value._id || value.id || null;
+        }
+        return value;
+    };
+
+    const updateRootTotals = (delta) => {
+        if (!delta) return;
+        const baseLimit = rootPagination.value.limit || 20;
+        const total = Math.max(0, (rootPagination.value.total || 0) + delta);
+        rootPagination.value = {
+            ...rootPagination.value,
+            total,
+            pages: Math.max(1, Math.ceil(total / baseLimit))
+        };
+    };
+
+    const findNodeById = (nodes, topicId) => {
+        const targetId = normalizeTopicId(topicId);
+        if (!targetId) return null;
+        for (const node of nodes || []) {
+            const nodeId = normalizeTopicId(node);
+            if (nodeId === targetId) return node;
+            if (node.children?.length) {
+                const found = findNodeById(node.children, targetId);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    const updateTopicInTree = (topicPatch) => {
+        const topicId = normalizeTopicId(topicPatch);
+        if (!topicId) return false;
+        let updated = false;
+        const walk = (nodes) => {
+            for (const node of nodes || []) {
+                if (normalizeTopicId(node) === topicId) {
+                    Object.assign(node, topicPatch);
+                    updated = true;
+                    return true;
+                }
+                if (node.children?.length && walk(node.children)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        walk(tree.value);
+        return updated;
+    };
+
+    const upsertTopicInTree = (topic) => {
+        if (!topic) return { updated: false, inserted: false };
+        const updated = updateTopicInTree(topic);
+        if (updated) return { updated: true, inserted: false };
+
+        const parentId = normalizeTopicId(topic.parent);
+        if (parentId) {
+            const parent = findNodeById(tree.value, parentId);
+            if (parent) {
+                if (!Array.isArray(parent.children)) {
+                    parent.children = [];
+                }
+                const exists = parent.children.some(child => normalizeTopicId(child) === normalizeTopicId(topic));
+                if (!exists) {
+                    parent.children.push(topic);
+                }
+                return { updated: false, inserted: true };
+            }
+        }
+
+        const existsInRoot = tree.value.some(node => normalizeTopicId(node) === normalizeTopicId(topic));
+        if (!existsInRoot) {
+            tree.value.unshift(topic);
+            updateRootTotals(1);
+            return { updated: false, inserted: true };
+        }
+
+        return { updated: false, inserted: false };
+    };
+
+    const removeTopicFromTree = (topicId) => {
+        const targetId = normalizeTopicId(topicId);
+        if (!targetId) return false;
+
+        let removed = false;
+        const rootIndex = tree.value.findIndex(node => normalizeTopicId(node) === targetId);
+        if (rootIndex !== -1) {
+            tree.value.splice(rootIndex, 1);
+            updateRootTotals(-1);
+            removed = true;
+        }
+
+        const walk = (nodes) => {
+            for (let i = (nodes?.length || 0) - 1; i >= 0; i -= 1) {
+                const node = nodes[i];
+                if (normalizeTopicId(node) === targetId) {
+                    nodes.splice(i, 1);
+                    removed = true;
+                    continue;
+                }
+                if (node.children?.length) {
+                    walk(node.children);
+                }
+            }
+        };
+        walk(tree.value);
+        return removed;
+    };
+
+    const mergeCurrentTopic = (topicPatch) => {
+        const topicId = normalizeTopicId(topicPatch);
+        if (!topicId || !currentTopic.value) return false;
+        if (normalizeTopicId(currentTopic.value) !== topicId) return false;
+        currentTopic.value = { ...currentTopic.value, ...topicPatch };
+        return true;
+    };
+
     const fetchRootPage = async ({ page = 1, limit = rootPagination.value.limit, mode = 'replace' } = {}) => {
         try {
             loading.value = true;
@@ -120,6 +241,13 @@ const useTopicsStore = defineStore("topics", () => {
         }
     };
 
+    const fetchTopicData = async (id) => {
+        if (!id || id === 'undefined') {
+            throw new Error('Invalid topic ID: ' + id);
+        }
+        return getTopicById(id);
+    };
+
     const createTopicAction = async (topicData) => {
         try {
             loading.value = true;
@@ -135,7 +263,26 @@ const useTopicsStore = defineStore("topics", () => {
         }
     };
 
-    return { tree, currentTopic, permissions, loading, error, rootPagination, fetchRootPage, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction, fetchChildren, refreshRoot };
+    return {
+        tree,
+        currentTopic,
+        permissions,
+        loading,
+        error,
+        rootPagination,
+        fetchRootPage,
+        fetchTree,
+        fetchSubtree,
+        fetchTopic,
+        fetchTopicData,
+        createTopic: createTopicAction,
+        fetchChildren,
+        refreshRoot,
+        updateTopicInTree,
+        upsertTopicInTree,
+        removeTopicFromTree,
+        mergeCurrentTopic
+    };
 });
 
 export {useTopicsStore};
