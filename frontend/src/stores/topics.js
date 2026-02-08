@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import {getTopicById, getTopicSubtree, getTopicTree, createTopic, listTopics} from "../services/topicService";
+import { getTopicById, getTopicSubtree, createTopic, listTopics } from "../services/topicService";
 
 const useTopicsStore = defineStore("topics", () => {
     const tree = ref([]);
@@ -8,18 +8,41 @@ const useTopicsStore = defineStore("topics", () => {
     const permissions = ref({});
     const loading = ref(false);
     const error = ref(null);
+    const rootPagination = ref({ page: 1, pages: 1, total: 0, limit: 20 });
 
-    const fetchTree = async () => {
+    const fetchRootPage = async ({ page = 1, limit = rootPagination.value.limit, mode = 'replace' } = {}) => {
         try {
             loading.value = true;
             error.value = null;
-            tree.value = await listTopics();
+
+            const data = await listTopics({ page, limit });
+            const topics = data.topics || [];
+
+            if (mode === 'append') {
+                tree.value = [...tree.value, ...topics];
+            } else {
+                tree.value = topics;
+            }
+
+            rootPagination.value = {
+                page: data.page || page,
+                pages: data.pages || Math.max(1, Math.ceil((data.total || topics.length) / limit)),
+                total: data.total || topics.length,
+                limit
+            };
+
+            return data;
         } catch (err) {
             error.value = err.message;
-            console.error('Error fetching tree:', err);
+            console.error('Error fetching root page:', err);
+            return { topics: [] };
         } finally {
             loading.value = false;
         }
+    };
+
+    const fetchTree = async () => {
+        return fetchRootPage({ page: 1, limit: rootPagination.value.limit, mode: 'replace' });
     };
 
     const fetchSubtree = async (id) => {
@@ -39,11 +62,38 @@ const useTopicsStore = defineStore("topics", () => {
         try {
             loading.value = true;
             error.value = null;
-            return await listTopics(topicId);
+            const data = await listTopics({ parentId: topicId });
+            return data.topics || [];
         } catch (err) {
             error.value = err.message;
             console.error('Error fetching children:', err);
             return [];
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const refreshRoot = async () => {
+        const baseLimit = rootPagination.value.limit;
+        const page = rootPagination.value.page;
+        const limit = baseLimit * page;
+
+        try {
+            loading.value = true;
+            error.value = null;
+
+            const data = await listTopics({ page: 1, limit });
+            tree.value = data.topics || [];
+
+            const total = data.total || tree.value.length;
+            rootPagination.value = {
+                ...rootPagination.value,
+                total,
+                pages: Math.max(1, Math.ceil(total / baseLimit))
+            };
+        } catch (err) {
+            error.value = err.message;
+            console.error('Error refreshing root topics:', err);
         } finally {
             loading.value = false;
         }
@@ -85,7 +135,7 @@ const useTopicsStore = defineStore("topics", () => {
         }
     };
 
-    return {tree, currentTopic, permissions, loading, error, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction, fetchChildren};
+    return { tree, currentTopic, permissions, loading, error, rootPagination, fetchRootPage, fetchTree, fetchSubtree, fetchTopic, createTopic: createTopicAction, fetchChildren, refreshRoot };
 });
 
 export {useTopicsStore};

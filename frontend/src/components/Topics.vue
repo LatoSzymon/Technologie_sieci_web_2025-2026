@@ -2,7 +2,7 @@
 <script setup>
 
 
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, onBeforeUnmount, computed, ref } from 'vue';
 import { useTopicsStore } from '../stores/topics';
 import TopicNode from './TopicNode.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
@@ -20,6 +20,12 @@ const search = ref('');
 
 const tagFilter = ref('');
 const allTags = ref([]);
+const sentinel = ref(null);
+const currentPage = ref(1);
+const totalPages = ref(1);
+const isLoadingMore = ref(false);
+const pageSize = 20;
+let observer = null;
 
 const filteredTree = computed(() => {
     function filterNodes(nodes) {
@@ -43,21 +49,60 @@ const onSelect = (topicId) => {
         router.push(`/topics/${topicId}`);
 }
 
-const handleCreated = () => {
-        topics.fetchTree();
+const handleCreated = async () => {
+        await loadFirstPage();
 };
 
-const handleRefresh = () => {
-        topics.fetchTree();
+const handleRefresh = async () => {
+        await loadFirstPage();
 };
 
+const loadFirstPage = async () => {
+        const data = await topics.fetchRootPage({ page: 1, limit: pageSize, mode: 'replace' });
+        currentPage.value = data.page || 1;
+        totalPages.value = data.pages || 1;
+};
+
+const loadMore = async () => {
+        if (isLoadingMore.value || currentPage.value >= totalPages.value) return;
+
+        isLoadingMore.value = true;
+        try {
+            const nextPage = currentPage.value + 1;
+            const data = await topics.fetchRootPage({ page: nextPage, limit: pageSize, mode: 'append' });
+            currentPage.value = data.page || nextPage;
+            totalPages.value = data.pages || totalPages.value;
+        } finally {
+            isLoadingMore.value = false;
+        }
+};
 
 onMounted(async () => {
-        await topics.fetchTree();
+        await loadFirstPage();
         try {
             allTags.value = await tagService.getTags();
         } catch (e) {
             allTags.value = [];
+        }
+
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    loadMore();
+                }
+            },
+            { root: null, rootMargin: '200px', threshold: 0.1 }
+        );
+
+        if (sentinel.value) {
+            observer.observe(sentinel.value);
+        }
+});
+
+onBeforeUnmount(() => {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
         }
 });
 
@@ -77,6 +122,8 @@ onMounted(async () => {
         <div class="topics-grid">
             <TopicNode v-for="node in filteredTree" :key="node._id" :node="node" @select="onSelect" @refresh="handleRefresh"/>
         </div>
+        <div ref="sentinel" class="topics-sentinel"></div>
+        <div v-if="isLoadingMore" class="topics-loading">Ladowanie kolejnych tematow...</div>
     </div>
 </template>
 
@@ -133,6 +180,17 @@ onMounted(async () => {
         margin-top: 20px;
         width: 100%;
         flex: 1;
+    }
+
+    .topics-sentinel {
+        height: 1px;
+        width: 100%;
+    }
+
+    .topics-loading {
+        color: #ffff00;
+        text-align: center;
+        margin: 20px 0;
     }
 
     @media (max-width: 1200px) {

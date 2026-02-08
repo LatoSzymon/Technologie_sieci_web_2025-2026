@@ -65,7 +65,11 @@ export const useSocketStore = defineStore('socket', () => {
 
         const refreshTopicData = (topicId) => {
             const topicsStore = useTopicsStore();
-            topicsStore.fetchTree();
+            if (topicsStore.refreshRoot) {
+                topicsStore.refreshRoot();
+            } else {
+                topicsStore.fetchTree();
+            }
             const targetId = topicId || currentTopicId.value;
             if (targetId) {
                 topicsStore.fetchTopic(targetId);

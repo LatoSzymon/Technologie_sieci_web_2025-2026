@@ -204,16 +204,39 @@ const createTopic = async (req, res) => {
 const listRootTopics = async (req, res) => {
     try {
         const parentId = req.query.parentId;
-        const filter = {parent: parentId ? parentId : null, isHidden: false};
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+
+        const userId = req.user?.userId;
+        const isAdmin = req.user?.role === 'admin';
+
+        const filter = { parent: parentId ? parentId : null };
+
+        if (!isAdmin) {
+            filter.$or = [
+                { isHidden: false },
+                { ownerId: userId },
+                { moderatorsId: userId }
+            ];
+        }
+
+        const total = await Topic.countDocuments(filter);
 
         const topics = await Topic.find(filter)
             .populate("ownerId", "login mail")
             .populate("tags", "name")
-            .select('-bannedUsersIds');
-        
-        return res.status(200).json({topics});
+            .select("-bannedUsersIds")
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return res.status(200).json({
+            topics,
+            page,
+            total,
+            pages: Math.ceil(total / limit)
+        });
     } catch (error) {
-        return res.status(500).json({message: "Błąd przy wylistowywaniu tematów-korzeni", error});
+        return res.status(500).json({ message: "Błąd przy wylistowywaniu tematów-korzeni", error });
     }
 };
 
@@ -792,7 +815,9 @@ const closeTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`topic:${topicId}`).emit('topic:closed', {topicId, message: 'Ten temat został zamknięty'});
+                const payload = {topicId, parentId: topic.parent, message: "Ten temat został zamknięty"}
+                io.to(`topic:${topicId}`).emit('topic:closed', payload);
+                io.emit('topic:closed', payload);
             }
         } catch (e) {
             console.error('WebSocket error (closeTopic):', e);
@@ -837,7 +862,9 @@ const openTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`topic:${topicId}`).emit('topic:opened', {topicId, message: 'Ten temat został otwarty'});
+                const payload = {topicId, parentId: topic.parent, message: "Ten temat został otwarty"}
+                io.to(`topic:${topicId}`).emit('topic:opened', payload);
+                io.emit('topic:opened', payload)
             }
         } catch (e) {
             console.error('WebSocket error (openTopic):', e);
@@ -882,7 +909,9 @@ const hideTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`topic:${topicId}`).emit('topic:hidden', {topicId, message: 'Ten temat został ukryty'});
+                const payload = { topicId, parentId: topic.parent, message: 'Ten temat został ukryty' };
+                io.to(`topic:${topicId}`).emit('topic:hidden', payload);
+                io.emit('topic:hidden', payload);
             }
         } catch (e) {
             console.error('WebSocket error (hideTopic):', e);
@@ -927,7 +956,9 @@ const unhideTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`topic:${topicId}`).emit('topic:unhidden', {topicId, message: 'Ten temat jest teraz widoczny'});
+                const payload = {topicId, parentId: topic.parent, message: "Ten temat jest teraz widoczny"}
+                io.to(`topic:${topicId}`).emit('topic:unhidden', payload);
+                io.emit('topic:unhidden', payload);
             }
         } catch (e) {
             console.error('WebSocket error (unhideTopic):', e);

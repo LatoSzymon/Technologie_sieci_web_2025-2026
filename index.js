@@ -24,7 +24,6 @@ app.use(morgan("dev"));
 app.use(cors({
     origin: function(origin, callback) {
         const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://localhost:5173', 'https://127.0.0.1:5173'];
-        // Dopuszczaj requesty bez origin (np. mobile apps, curl)
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {

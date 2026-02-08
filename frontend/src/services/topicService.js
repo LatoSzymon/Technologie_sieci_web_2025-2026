@@ -60,11 +60,14 @@ const removeModerator = async (topicId, userId) => {
     return res.data;
 };
 
-const listTopics = async (parentId) => {
-    const res = await api.get('/topics', {
-        params: parentId ? {parentId} : {}
-    });
-    return res.data.topics;
-}
+const listTopics = async ({ parentId, page, limit } = {}) => {
+    const params = {};
+    if (parentId) params.parentId = parentId;
+    if (page) params.page = page;
+    if (limit) params.limit = limit;
 
-export {listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, getTopicParticipants, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator};
+    const res = await api.get('/topics', { params });
+    return res.data;
+};
+
+export { listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, getTopicParticipants, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator };
