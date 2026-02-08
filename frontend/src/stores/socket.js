@@ -77,11 +77,12 @@ export const useSocketStore = defineStore('socket', () => {
                 const hasOnlyTagIds = Array.isArray(topic.tags)
                     && topic.tags.length > 0
                     && topic.tags.every(tag => typeof tag === 'string');
+                const missingName = !topic.name || typeof topic.name !== 'string';
 
                 topicsStore.upsertTopicInTree(topic);
                 topicsStore.mergeCurrentTopic(topic);
 
-                if (hasOnlyTagIds) {
+                if (hasOnlyTagIds || missingName) {
                     try {
                         const fetched = await topicsStore.fetchTopicData(topicId);
                         if (fetched) {

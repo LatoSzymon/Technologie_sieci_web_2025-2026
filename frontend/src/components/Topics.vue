@@ -30,7 +30,7 @@ let observer = null;
 const filteredTree = computed(() => {
     function filterNodes(nodes) {
         return (nodes || []).filter(node => {
-            const matchesSearch = !search.value || node.name.toLowerCase().includes(search.value.toLowerCase());
+            const matchesSearch = !search.value || (node.name || '').toLowerCase().includes(search.value.toLowerCase());
             const matchesTag = !tagFilter.value || (node.tags || []).some(tag => {
                 const tagId = typeof tag === 'object' ? tag._id : tag;
                 return tagId === tagFilter.value;
