@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const Topic = require("../models/Topic");
 const Post = require("../models/Post");
-const {getAllSubtopics} = require("./topicController");
+// const {getAllSubtopics} = require("./topicController");
 
 const pickRandom = (arr) => {
     if (!arr || arr.length === 0) {
@@ -37,7 +37,7 @@ const findNewOwner = async (topicId, deletedUserId) => {
         const batch = queue.splice(0, 25);
         const nodes = await Topic.find({_id: {$in: batch}}).select('ownerId children');
 
-        const candidates = nodes.map(t => t.ownerId).filter(ownerId => ownerId && ownerId.equals(deletedUserId));
+        const candidates = nodes.map(t => t.ownerId).filter(ownerId => ownerId && !ownerId.equals(deletedUserId));
 
         if (candidates.length > 0) {
             return pickRandom(candidates);
@@ -53,7 +53,49 @@ const findNewOwner = async (topicId, deletedUserId) => {
     return null;
 }
 
+const transferOwnership = async (topicId, deletedUserId, adminId, visited = new Map()) => {
+    const key = topicId.toString();
+    if (visited.has(key)) {
+        return visited.get(key);
+    }
 
+    const topic = await Topic.findById(topicId);
+    if (!topic) {
+        return null;
+    }
+
+    if (!topic.ownerId.equals(deletedUserId)) {
+        visited.set(key, topic.ownerId);
+        return topic.ownerId;
+    }
+
+    let newOwnerId = null;
+
+    if (topic.parent) {
+        newOwnerId = await transferOwnership(topic.parent, deletedUserId, adminId, visited);
+    }
+
+    if (!newOwnerId) {
+        newOwnerId = await findNewOwner(topic._id, deletedUserId);
+    }
+
+    if (!newOwnerId && topic.moderatorsId && topic.moderatorsId.length > 0) {
+        newOwnerId = topic.moderatorsId[0];
+    }
+
+    if (!newOwnerId) {
+        newOwnerId = adminId;
+    }
+
+    topic.ownerId = newOwnerId;
+    topic.moderatorsId = (topic.moderatorsId || []).filter(id => !id.equals(newOwnerId));
+    await topic.save();
+
+    visited.set(key, newOwnerId);
+
+    return newOwnerId;
+
+}
 
 
 const listRegisteredButNotAcceptedUsers = async (req, res) => {
@@ -201,6 +243,23 @@ const deleteUser = async (req, res) => {
         if (user.role === 'admin') {
             return res.status(403).json({message: "Nie można usunąć administratora"});
         }
+
+        const adminId = req.user.userId;
+
+        const ownedTopics = await Topic.find({ownerId: userId})
+            .select('_id');
+
+        const visited = new Map();
+        for (const topic of ownedTopics) {
+            await transferOwnership(topic._id, userId, adminId, visited);
+        }
+
+        await Topic.updateMany({$or: [
+            {moderatorsId: userId},
+            {bannedUsersIds: userId},
+            {'blockedUserExceptions.userId': userId}
+        ]}, 
+        {$pull: {moderatorsId: userId, bannedUsersIds: userId, blockedUserExceptions: {userId}}});
 
         await User.findByIdAndDelete(userId);
 
