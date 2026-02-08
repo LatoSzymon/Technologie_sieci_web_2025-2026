@@ -970,4 +970,4 @@ const unhideTopic = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic };
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic, getAllSubtopics };

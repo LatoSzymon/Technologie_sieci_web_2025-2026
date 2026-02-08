@@ -1,6 +1,60 @@
 const User = require("../models/User");
 const Topic = require("../models/Topic");
 const Post = require("../models/Post");
+const {getAllSubtopics} = require("./topicController");
+
+const pickRandom = (arr) => {
+    if (!arr || arr.length === 0) {
+        return null;
+    }
+    const index = Math.floor(Math.random() * arr.length)
+    return arr[index];
+};
+
+const findNewOwner = async (topicId, deletedUserId) => {
+    const topic = await Topic.findById(topicId);
+    if (!topic || !topic.children || topic.children.length === 0) {
+        return null;
+    }
+
+    const firstLevel = await Topic.find({ _id: {$in: topic.children}})
+        .select('ownerId children');
+
+    const directCandidates = firstLevel.map(t => t.ownerId).filter(ownerId => ownerId && !ownerId.equals(deletedUserId));
+
+    if (directCandidates.length > 0) {
+        return pickRandom(directCandidates);
+    }
+
+    const queue = [];
+    for (const child of firstLevel) {
+        if (child.children && child.children.length > 0) {
+            queue.push(...child.children);
+        }
+    }
+
+    while (queue.length > 0) {
+        const batch = queue.splice(0, 25);
+        const nodes = await Topic.find({_id: {$in: batch}}).select('ownerId children');
+
+        const candidates = nodes.map(t => t.ownerId).filter(ownerId => ownerId && ownerId.equals(deletedUserId));
+
+        if (candidates.length > 0) {
+            return pickRandom(candidates);
+        }
+
+        for (const node of nodes) {
+            if (node.children && node.children.length > 0) {
+                queue.push(...node.children);
+            }
+        }
+    }
+
+    return null;
+}
+
+
+
 
 const listRegisteredButNotAcceptedUsers = async (req, res) => {
     try {
