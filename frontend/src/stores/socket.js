@@ -248,7 +248,12 @@ export const useSocketStore = defineStore('socket', () => {
             console.log('[WebSocket] post:deleted received', data);
             const postStore = usePostStore();
             postStore.removePost(data.topicId, data.postId);
-            if (data?.topicId && isViewingTopic(data.topicId)) {
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            const deletedBy = data?.deletedBy;
+            const userIdStr = userId?.toString ? userId.toString() : String(userId || '');
+            const deletedByStr = deletedBy?.toString ? deletedBy.toString() : String(deletedBy || '');
+            if (data?.topicId && isViewingTopic(data.topicId) && deletedByStr && deletedByStr === userIdStr) {
                 pushNotification({
                     type: 'warning',
                     message: 'Post został usunięty'
@@ -377,6 +382,12 @@ export const useSocketStore = defineStore('socket', () => {
                 }
                 return;
             }
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({
+                    type: 'info',
+                    message: data?.message || 'Uzytkownik zostal zablokowany w tym temacie'
+                });
+            }
         });
 
         socket.value.on('topic:userUnblocked', (data) => {
@@ -396,6 +407,13 @@ export const useSocketStore = defineStore('socket', () => {
                 if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
                     refreshTopicData(data.topicId);
                 }
+                return;
+            }
+            if (isViewingTopic(data?.topicId)) {
+                pushNotification({
+                    type: 'success',
+                    message: data?.message || 'Uzytkownik zostal odblokowany w tym temacie'
+                });
             }
         });
 

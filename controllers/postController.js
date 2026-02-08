@@ -54,14 +54,14 @@ const createPost = async (req, res) => {
             { upsert: true }
         );
         
-        await post.populate('authorId', 'login email');
+        await post.populate('authorId', 'login mail role isBlocked');
         await post.populate('tags');
         if (replyTo) {
             await post.populate({
                 path: 'replyTo',
                 populate: {
                     path: 'authorId',
-                    select: 'login email'
+                    select: 'login mail role isBlocked'
                 }
             });
         }
@@ -78,6 +78,18 @@ const createPost = async (req, res) => {
                 });
 
                 io.to(`topic:${topicId}`).emit("post:new", post);
+
+                const participantPayload = {
+                    topicId,
+                    user: {
+                        _id: post.authorId?._id || authorId,
+                        login: post.authorId?.login,
+                        mail: post.authorId?.mail,
+                        role: post.authorId?.role,
+                        isBlocked: post.authorId?.isBlocked
+                    }
+                };
+                io.to(`topic:${topicId}`).emit('topic:participantsUpdated', participantPayload);
 
                 if (replyTo) {
                     try {
@@ -200,7 +212,11 @@ const deletePost = async (req, res) => {
             try {
                 const io = req.app.get && req.app.get('io');
                 if (io) {
-                    io.to(`topic:${post.topicId}`).emit('post:deleted', { postId: post._id, topicId: post.topicId });
+                    io.to(`topic:${post.topicId}`).emit('post:deleted', {
+                        postId: post._id,
+                        topicId: post.topicId,
+                        deletedBy: userId
+                    });
                     console.log(`Emitted post:deleted for post ${post._id}`);
                 }
             } catch (e) {
@@ -245,7 +261,7 @@ const updatePost = async (req, res) => {
         post.content = content;
 
         await post.save();
-        await post.populate('authorId', 'login email');
+        await post.populate('authorId', 'login mail role isBlocked');
         await post.populate('tags');
 
         try {

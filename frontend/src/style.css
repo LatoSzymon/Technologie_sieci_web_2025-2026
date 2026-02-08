@@ -26,6 +26,15 @@
   --danger: #f46b6b;
   --warning: #f2a23a;
   --success: #6fe081;
+  --action-user-bg: #0b0b0b;
+  --action-user-border: #c9d862;
+  --action-user-text: #e5f267;
+  --action-mod-bg: #0b1f2a;
+  --action-mod-border: #4cc9f0;
+  --action-mod-text: #7dd3fc;
+  --action-admin-bg: #2a0b0b;
+  --action-admin-border: #f46b6b;
+  --action-admin-text: #ffc1c1;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

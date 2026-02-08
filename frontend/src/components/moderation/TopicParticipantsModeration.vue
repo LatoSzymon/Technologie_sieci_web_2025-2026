@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useSocketStore } from '../../stores/socket';
 import { blockUserInTopic, unblockUserInTopic, getTopicSubtree, getTopicParticipants } from '../../services/topicService';
 
 const props = defineProps({
@@ -17,6 +18,15 @@ const searchQuery = ref('');
 const exceptionsByUser = ref({});
 const expandedUsers = ref(new Set());
 const savingUserId = ref('');
+const socketStore = useSocketStore();
+
+const normalizeId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object') {
+    return value._id || value.id || null;
+  }
+  return value;
+};
 
 const flattenTree = (node, flat = []) => {
   if (!node) return flat;
@@ -180,7 +190,53 @@ const loadParticipants = async () => {
   }
 };
 
-onMounted(loadParticipants);
+const shouldExcludeUser = (user) => {
+  if (!user) return true;
+  if (user.role === 'admin') return true;
+  const ownerId = normalizeId(props.topic?.ownerId);
+  const moderatorIds = (props.topic?.moderatorsId || [])
+    .map(mod => normalizeId(mod))
+    .filter(Boolean);
+  const userId = normalizeId(user._id || user.id);
+  if (!userId) return true;
+  if (ownerId && ownerId === userId) return true;
+  if (moderatorIds.includes(userId)) return true;
+  return false;
+};
+
+const handleParticipantUpdate = (payload) => {
+  if (!payload?.topicId || payload.topicId !== props.topicId) return;
+  const user = payload.user;
+  if (!user || shouldExcludeUser(user)) return;
+  const userId = normalizeId(user._id || user.id);
+  if (!userId) return;
+
+  const exists = participants.value.some(item => normalizeId(item._id) === userId);
+  if (!exists) {
+    participants.value.push({
+      _id: userId,
+      login: user.login || 'nieznany',
+      mail: user.mail
+    });
+    participants.value = participants.value.sort((a, b) =>
+      String(a.login || '').localeCompare(String(b.login || ''), 'pl')
+    );
+    syncExceptionsFromTopic();
+    socketStore.pushNotification({
+      type: 'info',
+      message: `Nowy rozmowca dolaczyl: ${user.login || 'nieznany'}`
+    });
+  }
+};
+
+onMounted(() => {
+  loadParticipants();
+  socketStore.on('topic:participantsUpdated', handleParticipantUpdate);
+});
+
+onBeforeUnmount(() => {
+  socketStore.off('topic:participantsUpdated', handleParticipantUpdate);
+});
 
 watch(() => props.topicId, () => {
   participants.value = [];

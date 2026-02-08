@@ -28,7 +28,7 @@ const md = new MarkdownIt({
 const authorName = computed(() => {
   const author = props.post.authorId;
   if (typeof author === 'object' && author !== null) {
-    return author.login || author.email || 'Anonim';
+    return author.login || author.email || author.mail || 'Anonim';
   }
   return 'Anonim';
 });
@@ -48,6 +48,24 @@ const currentUserId = computed(() => {
   const id = auth.user?._id || auth.user?.id;
   return normalizeId(id);
 });
+
+const authorId = computed(() => {
+  const author = props.post.authorId;
+  const raw = typeof author === 'object' && author !== null
+    ? (author._id || author.id)
+    : author;
+  return normalizeId(raw);
+});
+
+const authorRole = computed(() => {
+  const author = props.post.authorId;
+  if (typeof author === 'object' && author !== null) {
+    return author.role || null;
+  }
+  return null;
+});
+
+const isAuthorAdmin = computed(() => authorRole.value === 'admin');
 
 const isOwner = computed(() => {
   const authorId = props.post.authorId?._id || props.post.authorId?.id || props.post.authorId;
@@ -76,6 +94,70 @@ const isAdmin = computed(() => {
   return auth.user?.role === 'admin';
 });
 
+const topicOwnerId = computed(() => {
+  const owner = topics.currentTopic?.ownerId;
+  return normalizeId(typeof owner === 'object' ? (owner._id || owner.id) : owner);
+});
+
+const topicModeratorIds = computed(() => {
+  const moderators = topics.currentTopic?.moderatorsId || [];
+  return moderators
+    .map(mod => normalizeId(typeof mod === 'object' ? (mod._id || mod.id) : mod))
+    .filter(Boolean);
+});
+
+const isAuthorModerator = computed(() => {
+  if (!authorId.value) return false;
+  if (topicOwnerId.value && topicOwnerId.value === authorId.value) return true;
+  return topicModeratorIds.value.includes(authorId.value);
+});
+
+const isAuthorBlockedGlobally = computed(() => {
+  const author = props.post.authorId;
+  if (typeof author === 'object' && author !== null) {
+    return author.isBlocked === true;
+  }
+  return false;
+});
+
+const isAuthorBlockedInTopic = computed(() => {
+  const topic = topics.currentTopic;
+  if (!topic || !authorId.value) return false;
+
+  const isBanned = (topic.bannedUsersIds || []).some(id => normalizeId(id) === authorId.value);
+  if (!isBanned) return false;
+
+  const exception = (topic.blockedUserExceptions || []).find(exc =>
+    normalizeId(exc.userId) === authorId.value
+  );
+
+  if (exception && Array.isArray(exception.allowedInTopicIds)) {
+    const topicId = normalizeId(topic._id);
+    const allowed = exception.allowedInTopicIds.some(id => normalizeId(id) === topicId);
+    if (allowed) return false;
+  }
+
+  return true;
+});
+
+const canBlockInTopic = computed(() => {
+  if (!(canModerate.value || isAdmin.value)) return false;
+  if (!authorId.value) return false;
+  if (isOwner.value) return false;
+  if (isAuthorAdmin.value || isAuthorModerator.value) return false;
+  if (isAuthorBlockedInTopic.value) return false;
+  return true;
+});
+
+const canBlockGlobally = computed(() => {
+  if (!isAdmin.value) return false;
+  if (!authorId.value) return false;
+  if (isOwner.value) return false;
+  if (isAuthorAdmin.value || isAuthorModerator.value) return false;
+  if (isAuthorBlockedGlobally.value) return false;
+  return true;
+});
+
 const postTags = computed(() => props.post.tags || []);
 const replyToPostId = computed(() => props.post.replyTo);
 const replyToPost = computed(() => {
@@ -90,7 +172,7 @@ const replyAuthorName = computed(() => {
   if (!replyToPost.value) return null;
   const author = replyToPost.value.authorId;
   if (typeof author === 'object') {
-    return author.login || author.email || 'Anonim';
+    return author.login || author.email || author.mail || 'Anonim';
   }
   return 'Anonim';
 });
@@ -180,6 +262,9 @@ const blockUserGlobally = async () => {
   try {
     const userId = props.post.authorId._id || props.post.authorId;
     await globalBlockUser(userId);
+    if (typeof props.post.authorId === 'object' && props.post.authorId !== null) {
+      props.post.authorId.isBlocked = true;
+    }
     emit('blocked');
   } catch (e) {
     error.value = e?.response?.data?.message || 'Błąd blokowania użytkownika globalnie';
@@ -328,22 +413,24 @@ const toggleLike = async () => {
         <button 
           @click="toggleLike" 
           :disabled="isLiking"
-          class="btn-like"
+          class="action-btn action-user btn-like"
           :style="{ fontWeight: hasLiked ? 'bold' : 'normal' }"
         >
           + {{ likesCount }}
         </button>
         <template v-if="isOwner">
-          <button @click="initEditPost" class="btn-edit">Edytuj</button>
+          <button @click="initEditPost" class="action-btn action-user btn-edit">Edytuj</button>
         </template>
         <template v-if="canModerate || isAdmin">
-          <button @click="deletePost" :disabled="isDeleting" class="btn-delete">Usuń post</button>
-          <button @click="blockUserInTopic" :disabled="isBlocking" class="btn-block-topic" title="Zablokuj w tym temacie">Blokuj w temacie</button>
+          <button @click="deletePost" :disabled="isDeleting" class="action-btn action-mod btn-delete">Usuń post</button>
         </template>
-        <template v-if="isAdmin">
-          <button @click="blockUserGlobally" :disabled="isBlocking" class="btn-block-global" title="Zablokuj globalnie">Blokuj globalnie</button>
+        <template v-if="canBlockInTopic">
+          <button @click="blockUserInTopic" :disabled="isBlocking" class="action-btn action-mod btn-block-topic" title="Zablokuj w tym temacie">Blokuj w temacie</button>
         </template>
-        <button @click="emit('reply', { post, author: authorName })" class="btn-reply">Odpowiedz</button>
+        <template v-if="canBlockGlobally">
+          <button @click="blockUserGlobally" :disabled="isBlocking" class="action-btn action-admin btn-block-global" title="Zablokuj globalnie">Blokuj globalnie</button>
+        </template>
+        <button @click="emit('reply', { post, author: authorName })" class="action-btn action-user btn-reply">Odpowiedz</button>
       </div>
       <span v-if="error" class="error-text">{{ error }}</span>
     </div>
@@ -370,15 +457,38 @@ const toggleLike = async () => {
   margin-bottom: 10px;
 }
 
-.actions button {
+.action-btn {
   margin: 0;
   border-radius: 4px;
-  background-color: #0b0b0b;
   border: 2px solid var(--border);
-  color: var(--accent);
   padding: 6px 10px;
   font-size: 0.85em;
   text-transform: uppercase;
+  background-color: var(--action-user-bg);
+  color: var(--action-user-text);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-user {
+  border-color: var(--action-user-border);
+  background-color: var(--action-user-bg);
+  color: var(--action-user-text);
+}
+
+.action-mod {
+  border-color: var(--action-mod-border);
+  background-color: var(--action-mod-bg);
+  color: var(--action-mod-text);
+}
+
+.action-admin {
+  border-color: var(--action-admin-border);
+  background-color: var(--action-admin-bg);
+  color: var(--action-admin-text);
 }
 
 .actions {

@@ -373,13 +373,13 @@ const getPostsForTopic = async (req, res) => {
             .sort({createdAt: 1})       //surtowanie 1 to rosnąco, jak malejąco to -1
             .skip((page - 1) * limit)       //pomiń ileśtam rekordów po znalezieniu
             .limit(limit)               //pokaż tylko tyle ile limiit
-            .populate('authorId', 'login email')
+            .populate('authorId', 'login mail role isBlocked')
             .populate('tags')
             .populate({
                 path: 'replyTo',
                 populate: {
                     path: 'authorId',
-                    select: 'login email'
+                    select: 'login mail role isBlocked'
                 }
             });
 
