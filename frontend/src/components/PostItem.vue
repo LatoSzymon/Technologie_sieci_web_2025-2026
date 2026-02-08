@@ -1,6 +1,6 @@
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import MarkdownIt from 'markdown-it';
@@ -108,8 +108,57 @@ const isDeleting = ref(false);
 const isLiking = ref(false);
 const isEditingPost = ref(false);
 const editContent = ref('');
+const editTextarea = ref(null);
 const error = ref('');
 const editError = ref('');
+const selectedEditCodeLanguage = ref('');
+const editCodeLanguages = [
+  'bash',
+  'c',
+  'cpp',
+  'csharp',
+  'css',
+  'go',
+  'html',
+  'java',
+  'javascript',
+  'json',
+  'kotlin',
+  'php',
+  'python',
+  'ruby',
+  'rust',
+  'sql',
+  'swift',
+  'typescript',
+  'yaml'
+];
+
+const insertCodeBlock = (textareaRef, contentRef, language) => {
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+
+  const start = textarea.selectionStart ?? contentRef.value.length;
+  const end = textarea.selectionEnd ?? contentRef.value.length;
+  const selectedText = contentRef.value.slice(start, end);
+  const langToken = language ? language.trim() : '';
+  const openFence = `\n\`\`\`${langToken}\n`;
+  const closeFence = `\n\`\`\`\n`;
+  const before = contentRef.value.slice(0, start);
+  const after = contentRef.value.slice(end);
+
+  contentRef.value = `${before}${openFence}${selectedText}${closeFence}${after}`;
+
+  nextTick(() => {
+    textarea.focus();
+    const cursorPos = before.length + openFence.length + selectedText.length;
+    textarea.setSelectionRange(cursorPos, cursorPos);
+  });
+};
+
+const insertCodeBlockIntoEdit = () => {
+  insertCodeBlock(editTextarea, editContent, selectedEditCodeLanguage.value);
+};
 
 const blockUserInTopic = async () => {
   isBlocking.value = true;
@@ -232,7 +281,19 @@ const toggleLike = async () => {
       <div class="edit-content-wrapper">
         <div class="form-group">
           <label class="form-label">Treść:</label>
-          <textarea v-model="editContent" class="textarea-edit" placeholder="Wpisz treść posta..."></textarea>
+          <div class="code-toolbar">
+            <select v-model="selectedEditCodeLanguage" class="form-select-small">
+              <option value="">Kod (bez jezyka)</option>
+              <option v-for="lang in editCodeLanguages" :key="lang" :value="lang">
+                {{ lang }}
+              </option>
+            </select>
+            <button type="button" class="btn-edit-code" @click="insertCodeBlockIntoEdit">
+              Wstaw blok kodu
+            </button>
+            <small class="code-help">Zaznacz fragment i kliknij, aby owinac go blokiem kodu.</small>
+          </div>
+          <textarea ref="editTextarea" v-model="editContent" class="textarea-edit" placeholder="Wpisz treść posta..."></textarea>
         </div>
         
         <div v-if="editError" class="error-message">
@@ -365,6 +426,42 @@ const toggleLike = async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.code-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.code-help {
+  color: #aaa;
+  font-size: 0.85em;
+}
+
+.form-select-small {
+  padding: 6px 10px;
+  border: 1px solid #ffff00;
+  border-radius: 4px;
+  background-color: #1a1a1a;
+  color: #fff;
+  font-family: "Pixelify Sans", sans-serif;
+}
+
+.btn-edit-code {
+  padding: 6px 10px;
+  font-size: 0.9em;
+  background-color: #000;
+  color: #ffff00;
+  border: 2px solid #ffff00;
+  cursor: pointer;
+}
+
+.btn-edit-code:hover {
+  background-color: #ffff00;
+  color: #000;
 }
 
 

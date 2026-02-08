@@ -21,6 +21,7 @@ export const useSocketStore = defineStore('socket', () => {
             message: notification.message || 'Nowe powiadomienie'
         };
         notifications.value.unshift(entry);
+        setTimeout(removeNotification(entry.id), 3000);
     };
 
     const removeNotification = (id) => {

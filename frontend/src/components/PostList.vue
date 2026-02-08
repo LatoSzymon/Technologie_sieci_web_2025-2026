@@ -33,12 +33,36 @@ const posts = computed(() => postStore.getPosts(props.topicId));
 const pagination = computed(() => postStore.getPagination(props.topicId));
 
 const newPostContent = ref("");
+const newPostTextarea = ref(null);
 const isAdding = ref(false);
 const addError = ref("");
 const selectedTagIds = ref([]);
 const availableTags = ref([]);
 const replyingToPostId = ref(null);
 const replyingToPost = ref(null);
+
+const selectedCodeLanguage = ref('');
+const codeLanguages = [
+    'bash',
+    'c',
+    'cpp',
+    'csharp',
+    'css',
+    'go',
+    'html',
+    'java',
+    'javascript',
+    'json',
+    'kotlin',
+    'php',
+    'python',
+    'ruby',
+    'rust',
+    'sql',
+    'swift',
+    'typescript',
+    'yaml'
+];
 
 const currentPage = ref(1);
 const pageSize = ref(15);
@@ -100,6 +124,32 @@ const clearForm = () => {
     addError.value = "";
     replyingToPostId.value = null;
     replyingToPost.value = null;
+};
+
+const insertCodeBlock = (textareaRef, contentRef, language) => {
+    const textarea = textareaRef.value;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart ?? contentRef.value.length;
+    const end = textarea.selectionEnd ?? contentRef.value.length;
+    const selectedText = contentRef.value.slice(start, end);
+    const langToken = language ? language.trim() : '';
+    const openFence = `\n\`\`\`${langToken}\n`;
+    const closeFence = `\n\`\`\`\n`;
+    const before = contentRef.value.slice(0, start);
+    const after = contentRef.value.slice(end);
+
+    contentRef.value = `${before}${openFence}${selectedText}${closeFence}${after}`;
+
+    nextTick(() => {
+        textarea.focus();
+        const cursorPos = before.length + openFence.length + selectedText.length;
+        textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+};
+
+const insertCodeBlockIntoNewPost = () => {
+    insertCodeBlock(newPostTextarea, newPostContent, selectedCodeLanguage.value);
 };
 
 const loadMore = async () => {
@@ -281,7 +331,20 @@ defineExpose({
             </div>
             
             <div class="form-group" :class="{ 'sidebar-textarea': isSidebar }">
+                <div class="code-toolbar">
+                    <select v-model="selectedCodeLanguage" class="form-select-small" :disabled="isAdding">
+                        <option value="">Kod (bez jezyka)</option>
+                        <option v-for="lang in codeLanguages" :key="lang" :value="lang">
+                            {{ lang }}
+                        </option>
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-code" @click="insertCodeBlockIntoNewPost" :disabled="isAdding">
+                        Wstaw blok kodu
+                    </button>
+                    <small class="form-help code-help">Zaznacz fragment i kliknij, aby owinac go blokiem kodu.</small>
+                </div>
                 <textarea 
+                    ref="newPostTextarea"
                     v-model="newPostContent" 
                     :rows="isSidebar ? 3 : 4" 
                     class="form-textarea"
@@ -451,6 +514,23 @@ defineExpose({
     background-color: #1a1a1a;
     color: #fff;
     font-family: "Pixelify Sans", sans-serif;
+}
+
+.code-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.code-help {
+    margin-top: 0;
+}
+
+.btn-code {
+    padding: 6px 10px;
+    font-size: 0.9em;
 }
 
 .form-textarea {
