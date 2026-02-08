@@ -1,16 +1,34 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import { listUnapprovedUsers, listBlockedUsers, listAllNonAdminUsers, approveUser, blockUser, unblockUser, deleteUser, closeTopic, openTopic, hideTopic, unhideTopic, getStatistics } from '../services/adminService';
+import {
+	listUnapprovedUsers,
+	listBlockedUsers,
+	listAllNonAdminUsers,
+	approveUser,
+	blockUser,
+	unblockUser,
+	deleteUser
+} from '../services/adminService';
 import tagService from '../services/tagService';
-import * as topicService from '../services/topicService';
 import { useSocketStore } from '../stores/socket';
-import Chat from './Chat.vue';
 
 const socketStore = useSocketStore();
-const notifications = computed(() => socketStore.notifications);
+
+const pendingUsers = ref([]);
+const blockedUsers = ref([]);
+const allUsers = ref([]);
+const tags = ref([]);
+const loading = ref(false);
+const error = ref('');
+const newTagName = ref('');
+const activityLog = ref([]);
+const pendingSearchQuery = ref('');
+const blockedSearchQuery = ref('');
+const usersSearchQuery = ref('');
+const tagSearchQuery = ref('');
 
 const handleUsersUpdated = (data) => {
-	if (data.type === 'blocked' || data.type === 'unblocked') {
+	if (data?.type === 'blocked' || data?.type === 'unblocked') {
 		fetchAllUsers();
 		fetchBlocked();
 	}
@@ -20,28 +38,14 @@ onMounted(() => {
 	fetchPending();
 	fetchBlocked();
 	fetchAllUsers();
-	fetchAllTopics();
 	fetchTags();
-	fetchStatistics();
-	
+
 	socketStore.on('admin:users-updated', handleUsersUpdated);
 });
 
 onBeforeUnmount(() => {
 	socketStore.off('admin:users-updated', handleUsersUpdated);
 });
-
-const pendingUsers = ref([]);
-const blockedUsers = ref([]);
-const allUsers = ref([]);
-const allTopics = ref([]);
-const tags = ref([]);
-const statistics = ref(null);
-const loading = ref(false);
-const error = ref('');
-const actionInfo = ref('');
-const manualUserId = ref('');
-const newTagName = ref('');
 
 const fetchPending = async () => {
 	loading.value = true;
@@ -81,24 +85,59 @@ const fetchTags = async () => {
 	}
 };
 
-const fetchAllTopics = async () => {
-	try {
-		const topicsData = await topicService.getTopicTree();
-		allTopics.value = Array.isArray(topicsData) ? topicsData : (topicsData?.topics || []);
-		console.log('Loaded topics:', allTopics.value);
-	} catch (e) {
-		error.value = 'Błąd pobierania tematów';
-		console.error('Error loading topics:', e);
-	}
+const addActivityEntry = (type, message, context = {}) => {
+	const entry = {
+		id: crypto?.randomUUID?.() || String(Date.now()),
+		ts: new Date(),
+		type,
+		message,
+		context
+	};
+	activityLog.value.unshift(entry);
+	activityLog.value = activityLog.value.slice(0, 200);
 };
 
-const fetchStatistics = async () => {
-	try {
-		statistics.value = await getStatistics();
-	} catch (e) {
-		error.value = 'Błąd pobierania statystyk';
-		console.error(e);
-	}
+const notify = (type, message, context = {}) => {
+	socketStore.pushNotification({ type, message });
+	addActivityEntry(type, message, context);
+};
+
+const normalizeSearch = (value) => value.trim().toLowerCase();
+
+const filteredPendingUsers = computed(() => {
+	const query = normalizeSearch(pendingSearchQuery.value);
+	if (!query) return pendingUsers.value;
+	return pendingUsers.value.filter(user =>
+		user.login?.toLowerCase().includes(query) || user.mail?.toLowerCase().includes(query)
+	);
+});
+
+const filteredBlockedUsers = computed(() => {
+	const query = normalizeSearch(blockedSearchQuery.value);
+	if (!query) return blockedUsers.value;
+	return blockedUsers.value.filter(user =>
+		user.login?.toLowerCase().includes(query) || user.mail?.toLowerCase().includes(query)
+	);
+});
+
+const filteredAllUsers = computed(() => {
+	const query = normalizeSearch(usersSearchQuery.value);
+	if (!query) return allUsers.value;
+	return allUsers.value.filter(user =>
+		user.login?.toLowerCase().includes(query) || user.mail?.toLowerCase().includes(query)
+	);
+});
+
+const filteredTags = computed(() => {
+	const query = normalizeSearch(tagSearchQuery.value);
+	if (!query) return tags.value;
+	return tags.value.filter(tag => tag.name?.toLowerCase().includes(query));
+});
+
+const findUserLabel = (userId) => {
+	const source = [...pendingUsers.value, ...blockedUsers.value, ...allUsers.value];
+	const match = source.find(user => user._id === userId);
+	return match?.login || userId;
 };
 
 const addTag = async () => {
@@ -108,11 +147,13 @@ const addTag = async () => {
 	}
 	try {
 		await tagService.createTag({ name: newTagName.value.trim() });
-		actionInfo.value = 'Dodano tag';
+		notify('success', 'Dodano tag', { scope: 'tags' });
 		newTagName.value = '';
 		await fetchTags();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd dodawania tagu';
+		const message = e?.response?.data?.message || 'Błąd dodawania tagu';
+		error.value = message;
+		notify('error', message, { scope: 'tags' });
 	}
 };
 
@@ -120,101 +161,65 @@ const deleteTag = async (tagId) => {
 	if (!confirm('Usunąć ten tag?')) return;
 	try {
 		await tagService.deleteTag(tagId);
-		actionInfo.value = 'Usunięto tag';
+		notify('success', 'Usunięto tag', { scope: 'tags' });
 		await fetchTags();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd usuwania tagu';
+		const message = e?.response?.data?.message || 'Błąd usuwania tagu';
+		error.value = message;
+		notify('error', message, { scope: 'tags' });
 	}
 };
 
 const approve = async (userId) => {
-	actionInfo.value = '';
 	try {
 		await approveUser(userId);
-		actionInfo.value = 'Zaakceptowano użytkownika';
+		notify('success', `Zaakceptowano użytkownika: ${findUserLabel(userId)}`, { scope: 'users', userId });
 		await fetchPending();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd akceptacji';
+		const message = e?.response?.data?.message || 'Błąd akceptacji';
+		error.value = message;
+		notify('error', message, { scope: 'users', userId });
 	}
 };
 
 const block = async (userId) => {
-	actionInfo.value = '';
 	try {
 		await blockUser(userId);
-		actionInfo.value = 'Zablokowano użytkownika';
+		notify('warning', `Zablokowano użytkownika: ${findUserLabel(userId)}`, { scope: 'users', userId });
+		await fetchAllUsers();
+		await fetchBlocked();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd blokowania';
+		const message = e?.response?.data?.message || 'Błąd blokowania';
+		error.value = message;
+		notify('error', message, { scope: 'users', userId });
 	}
 };
 
 const unblock = async (userId) => {
-	actionInfo.value = '';
 	try {
 		await unblockUser(userId);
-		actionInfo.value = 'Odblokowano użytkownika';
+		notify('success', `Odblokowano użytkownika: ${findUserLabel(userId)}`, { scope: 'users', userId });
+		await fetchAllUsers();
+		await fetchBlocked();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd odblokowania';
+		const message = e?.response?.data?.message || 'Błąd odblokowania';
+		error.value = message;
+		notify('error', message, { scope: 'users', userId });
 	}
 };
 
 const deleteUserAction = async (userId) => {
 	if (!confirm('Czy na pewno usunąć tego użytkownika? (Ta operacja jest nieodwracalna)')) return;
-	actionInfo.value = '';
 	try {
 		await deleteUser(userId);
-		actionInfo.value = 'Usunięto użytkownika';
+		notify('warning', `Usunięto użytkownika: ${findUserLabel(userId)}`, { scope: 'users', userId });
 		await fetchAllUsers();
 	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd usuwania użytkownika';
+		const message = e?.response?.data?.message || 'Błąd usuwania użytkownika';
+		error.value = message;
+		notify('error', message, { scope: 'users', userId });
 	}
 };
-
-const closeTopicAction = async (topicId) => {
-	if (!confirm('Zamknąć ten temat?')) return;
-	try {
-		await closeTopic(topicId);
-		actionInfo.value = 'Zamknięto temat';
-		await fetchAllTopics();
-	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd zamykania tematu';
-	}
-};
-
-const openTopicAction = async (topicId) => {
-	if (!confirm('Otworzyć ten temat?')) return;
-	try {
-		await openTopic(topicId);
-		actionInfo.value = 'Otwarty temat';
-		await fetchAllTopics();
-	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd otwierania tematu';
-	}
-};
-
-const hideTopicAction = async (topicId) => {
-	if (!confirm('Ukryć ten temat?')) return;
-	try {
-		await hideTopic(topicId);
-		actionInfo.value = 'Ukryto temat';
-		await fetchAllTopics();
-	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd ukrywania tematu';
-	}
-};
-
-const unhideTopicAction = async (topicId) => {
-	if (!confirm('Odkryć ten temat?')) return;
-	try {
-		await unhideTopic(topicId);
-		actionInfo.value = 'Odkryto temat';
-		await fetchAllTopics();
-	} catch (e) {
-		error.value = e?.response?.data?.message || 'Błąd odkrywania tematu';
-	}
-};
-
-onMounted(fetchPending);
 </script>
 
 <template>
@@ -222,44 +227,57 @@ onMounted(fetchPending);
 		<h2 class="admin-title">Panel Administratora</h2>
 		<div v-if="loading" class="loading-message">Ładowanie...</div>
 		<div v-if="error" class="alert alert-error">{{ error }}</div>
-		<div v-if="actionInfo" class="alert alert-success">{{ actionInfo }}</div>
 
-		<section class="admin-section">
-			<h3 class="section-title">Powiadomienia</h3>
-			<div v-if="notifications.length === 0" class="empty-state">Brak powiadomień.</div>
-			<ul v-else class="notifications-list">
-				<li v-for="(n, idx) in notifications" :key="idx" class="notification-item">
+		<section class="admin-section section-activity">
+			<div class="section-header">
+				<h3 class="section-title">Wykaz aktywności</h3>
+				<div class="section-tools">
+					<span class="section-meta">{{ activityLog.length }} zdarzeń</span>
+				</div>
+			</div>
+			<div v-if="activityLog.length === 0" class="empty-state">Brak zdarzeń do wyświetlenia.</div>
+			<ul v-else class="notifications-list list-scroll">
+				<li v-for="n in activityLog" :key="n.id" class="notification-item">
 					<span class="notification-time">{{ n.ts?.toLocaleString?.() || '' }}</span>
-					<span v-if="n.type === 'new-user'" class="badge badge-new">Nowa rejestracja</span>
-					<span v-else-if="n.type === 'user-approved'" class="badge badge-approved">Akceptacja</span>
-					<span v-else class="badge badge-other">Inne</span>
+					<span class="badge" :class="`badge-${n.type || 'other'}`">
+						{{ n.type || 'info' }}
+					</span>
 					<span class="notification-message">{{ n.message }}</span>
 				</li>
 			</ul>
 		</section>
 
-		<section class="admin-section">
-			<h3 class="section-title">Zarządzanie tagami</h3>
+		<section class="admin-section section-tags">
+			<div class="section-header">
+				<h3 class="section-title">Zarządzanie tagami</h3>
+				<div class="section-tools">
+					<input
+						v-model="tagSearchQuery"
+						placeholder="Szukaj tagu..."
+						class="form-input form-input-sm"
+					/>
+				</div>
+			</div>
 			<div class="tag-management">
 				<div class="tag-input-group">
-					<input 
-						v-model="newTagName" 
-						placeholder="Nazwa nowego tagu" 
+					<input
+						v-model="newTagName"
+						placeholder="Nazwa nowego tagu"
 						@keyup.enter="addTag"
 						class="form-input"
 					/>
 					<button @click="addTag" class="btn btn-primary">Dodaj tag</button>
 				</div>
-				
+
 				<div class="tags-list-container">
 					<div class="list-header">
-						<h4>Istniejące tagi ({{ tags.length }})</h4>
+						<h4>Istniejące tagi ({{ filteredTags.length }})</h4>
 					</div>
-					<div v-if="tags.length === 0" class="empty-state">Brak tagów</div>
-					<div v-else class="tags-grid">
-						<div v-for="tag in tags" :key="tag._id" class="tag-item">
+					<div v-if="filteredTags.length === 0" class="empty-state">Brak tagów</div>
+					<div v-else class="tags-grid list-scroll">
+						<div v-for="tag in filteredTags" :key="tag._id" class="tag-item">
 							<span class="tag-name">{{ tag.name }}</span>
-							<button 
+							<button
 								class="tag-delete-btn"
 								@click="deleteTag(tag._id)"
 								title="Usuń tag"
@@ -272,11 +290,20 @@ onMounted(fetchPending);
 			</div>
 		</section>
 
-		<section class="admin-section">
-			<h3 class="section-title">Niezaakceptowani użytkownicy</h3>
-			<div v-if="pendingUsers.length === 0" class="empty-state">Brak oczekujących.</div>
-			<div v-else class="users-list">
-				<div v-for="u in pendingUsers" :key="u._id" class="user-card">
+		<section class="admin-section section-pending">
+			<div class="section-header">
+				<h3 class="section-title">Niezaakceptowani użytkownicy</h3>
+				<div class="section-tools">
+					<input
+						v-model="pendingSearchQuery"
+						placeholder="Szukaj użytkownika..."
+						class="form-input form-input-sm"
+					/>
+				</div>
+			</div>
+			<div v-if="filteredPendingUsers.length === 0" class="empty-state">Brak oczekujących.</div>
+			<div v-else class="users-list list-scroll">
+				<div v-for="u in filteredPendingUsers" :key="u._id" class="user-card">
 					<div class="user-card-header">
 						<strong class="user-login">{{ u.login }}</strong>
 						<small class="user-email">{{ u.mail }}</small>
@@ -289,11 +316,20 @@ onMounted(fetchPending);
 			</div>
 		</section>
 
-		<section class="admin-section">
-			<h3 class="section-title">Zablokowani użytkownicy</h3>
-			<div v-if="blockedUsers.length === 0" class="empty-state">Brak zablokowanych.</div>
-			<div v-else class="users-list">
-				<div v-for="u in blockedUsers" :key="u._id" class="user-card">
+		<section class="admin-section section-blocked">
+			<div class="section-header">
+				<h3 class="section-title">Zablokowani użytkownicy</h3>
+				<div class="section-tools">
+					<input
+						v-model="blockedSearchQuery"
+						placeholder="Szukaj użytkownika..."
+						class="form-input form-input-sm"
+					/>
+				</div>
+			</div>
+			<div v-if="filteredBlockedUsers.length === 0" class="empty-state">Brak zablokowanych.</div>
+			<div v-else class="users-list list-scroll">
+				<div v-for="u in filteredBlockedUsers" :key="u._id" class="user-card">
 					<div class="user-card-header">
 						<strong class="user-login">{{ u.login }}</strong>
 						<small class="user-email">{{ u.mail }}</small>
@@ -305,169 +341,65 @@ onMounted(fetchPending);
 			</div>
 		</section>
 
-		<section class="admin-section">
-			<h3 class="section-title">Zarządzanie użytkownikami</h3>
-			<div v-if="allUsers.length === 0" class="empty-state">Brak użytkowników.</div>
+		<section class="admin-section section-users">
+			<div class="section-header">
+				<h3 class="section-title">Zarządzanie użytkownikami</h3>
+				<div class="section-tools">
+					<input
+						v-model="usersSearchQuery"
+						placeholder="Szukaj użytkownika..."
+						class="form-input form-input-sm"
+					/>
+				</div>
+			</div>
+			<div v-if="filteredAllUsers.length === 0" class="empty-state">Brak użytkowników.</div>
 			<div v-else class="users-management">
-				<div class="users-count">Wszyscy użytkownicy: <strong>{{ allUsers.length }}</strong></div>
-				<div class="users-grid">
-					<div v-for="u in allUsers" :key="u._id" class="user-card">
-						<div class="user-card-header">
-							<strong class="user-login">{{ u.login }}</strong>
-							<small class="user-email">{{ u.mail }}</small>
-						</div>
-						<div class="user-badges">
-							<span v-if="u.isBlocked" class="badge badge-blocked">Zablokowany</span>
-							<span v-if="!u.isApprovedByAdmin" class="badge badge-pending">Oczekuje</span>
-						</div>
-						<div class="user-card-actions">
-							<button 
-								v-if="!u.isBlocked"
-								@click="block(u._id)"
-								class="btn btn-danger"
-								title="Zablokuj użytkownika"
-							>
-								Blokuj
-							</button>
-							<button 
-								v-else
-								@click="unblock(u._id)"
-								class="btn btn-success"
-								title="Odblokuj użytkownika"
-							>
-								Odblokuj
-							</button>
-							<button 
-								@click="deleteUserAction(u._id)"
-								class="btn btn-danger"
-								title="Usuń użytkownika"
-							>
-								Usuń
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<section class="admin-section">
-			<h3 class="section-title">Zarządzanie drzewami tematów</h3>
-			<div v-if="allTopics.length === 0" class="empty-state">Brak tematów.</div>
-			<div v-else class="topics-grid">
-				<div v-for="topic in allTopics" :key="topic._id" class="topic-card">
-					<div class="topic-card-header">
-						<strong class="topic-name">{{ topic.name }}</strong>
-						<div class="topic-badges">
-							<span v-if="topic.isClosed" class="badge badge-closed">Zamknięty</span>
-							<span v-if="topic.isHidden" class="badge badge-hidden">Ukryty</span>
-						</div>
-					</div>
-					<div class="topic-actions">
-						<button 
-							v-if="!topic.isClosed"
-							@click="closeTopicAction(topic._id)"
-							class="btn btn-sm btn-danger"
-							title="Zamknij temat"
-						>
-							Zamknij
-						</button>
-						<button 
-							v-else
-							@click="openTopicAction(topic._id)"
-							class="btn btn-sm btn-success"
-							title="Otwórz temat"
-						>
-							Otwórz
-						</button>
-						<button 
-							v-if="!topic.isHidden"
-							@click="hideTopicAction(topic._id)"
-							class="btn btn-sm btn-warning"
-							title="Ukryj temat"
-						>
-							Ukryj
-						</button>
-						<button 
-							v-else
-							@click="unhideTopicAction(topic._id)"
-							class="btn btn-sm btn-info"
-							title="Odkryj temat"
-						>
-							Odkryj
-						</button>
-					</div>
-				</div>
-			</div>
-		</section>
-		</div>
-
-		<!-- <section class="admin-section">
-			<h3 class="section-title">Statystyki</h3>
-			<div v-if="!statistics" class="loading-message">Ładowanie statystyk...</div>
-			<div v-else>
-
-				<div class="stats-grid">
-					<div class="stat-card stat-blue">
-						<div class="stat-value">{{ statistics.users.total }}</div>
-						<div class="stat-label">Użytkowników</div>
-					</div>
-					<div class="stat-card stat-green">
-						<div class="stat-value">{{ statistics.users.approved }}</div>
-						<div class="stat-label">Zaakceptowanych</div>
-					</div>
-					<div class="stat-card stat-yellow">
-						<div class="stat-value">{{ statistics.users.pending }}</div>
-						<div class="stat-label">Oczekujących</div>
-					</div>
-					<div class="stat-card stat-red">
-						<div class="stat-value">{{ statistics.users.blocked }}</div>
-						<div class="stat-label">Zablokowanych</div>
-					</div>
-					<div class="stat-card stat-purple">
-						<div class="stat-value">{{ statistics.topics.total }}</div>
-						<div class="stat-label">Tematów</div>
-					</div>
-					<div class="stat-card stat-orange">
-						<div class="stat-value">{{ statistics.posts.total }}</div>
-						<div class="stat-label">Postów</div>
-					</div>
-				</div>
-
-				<div v-if="statistics.posts.topPostsByLikes && statistics.posts.topPostsByLikes.length" class="stats-subsection">
-					<h4 class="subsection-title">Top posty (po likach)</h4>
-					<div class="posts-list">
-						<div v-for="(post, idx) in statistics.posts.topPostsByLikes" :key="idx" class="post-item">
-							<div class="post-rank">{{ idx + 1 }}</div>
-							<div class="post-content">
-								<div class="post-author">{{ post.author }}</div>
-								<div class="post-text">{{ post.content }}</div>
-								<div class="post-likes">{{ post.likes }} polubień</div>
+				<div class="users-count">Użytkownicy: <strong>{{ filteredAllUsers.length }}</strong></div>
+				<div class="list-scroll list-scroll-lg">
+					<div class="users-grid">
+						<div v-for="u in filteredAllUsers" :key="u._id" class="user-card">
+							<div class="user-card-header">
+								<strong class="user-login">{{ u.login }}</strong>
+								<small class="user-email">{{ u.mail }}</small>
+							</div>
+							<div class="user-badges">
+								<span v-if="u.isBlocked" class="badge badge-blocked">Zablokowany</span>
+								<span v-if="!u.isApprovedByAdmin" class="badge badge-pending">Oczekuje</span>
+							</div>
+							<div class="user-card-actions">
+								<button
+									v-if="!u.isBlocked"
+									@click="block(u._id)"
+									class="btn btn-danger"
+									title="Zablokuj użytkownika"
+								>
+									Blokuj
+								</button>
+								<button
+									v-else
+									@click="unblock(u._id)"
+									class="btn btn-success"
+									title="Odblokuj użytkownika"
+								>
+									Odblokuj
+								</button>
+								<button
+									@click="deleteUserAction(u._id)"
+									class="btn btn-danger"
+									title="Usuń użytkownika"
+								>
+									Usuń
+								</button>
 							</div>
 						</div>
 					</div>
 				</div>
-
-				<div v-if="statistics.analytics && statistics.analytics.usersByRole && statistics.analytics.usersByRole.length" class="stats-subsection">
-					<h4 class="subsection-title">Użytkownicy po rolach</h4>
-					<div class="roles-grid">
-						<div v-for="role in statistics.analytics.usersByRole" :key="role._id" class="role-card">
-							<span class="role-name">{{ role._id || 'user' }}</span>
-							<span class="role-count">{{ role.count }}</span>
-						</div>
-					</div>
-				</div>
 			</div>
 		</section>
-
-		<section class="admin-section">
-			<h3 class="section-title">Chat z użytkownikami</h3>
-			<Chat />
-		</section>
-	</div> na potem mooooże-->
+	</div>
 </template>
 
 <style scoped>
-
 .admin-container {
 	max-width: 1200px;
 	margin: 0 auto;
@@ -488,11 +420,56 @@ onMounted(fetchPending);
 	margin-bottom: 20px;
 }
 
+.section-activity {
+	background: rgba(238, 255, 0, 0.06);
+	border: 2px solid rgba(238, 255, 0, 0.3);
+}
+
+.section-tags {
+	background: rgba(59, 130, 246, 0.08);
+	border: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.section-pending {
+	background: rgba(249, 115, 22, 0.08);
+	border: 2px solid rgba(249, 115, 22, 0.3);
+}
+
+.section-blocked {
+	background: rgba(239, 68, 68, 0.08);
+	border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.section-users {
+	background: rgba(74, 222, 128, 0.08);
+	border: 2px solid rgba(74, 222, 128, 0.3);
+}
+
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+}
+
 .section-title {
 	color: rgb(238, 255, 0);
-	margin-top: 0;
-	margin-bottom: 20px;
+	margin: 0;
 	font-size: 1.3em;
+}
+
+.section-tools {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.section-meta {
+	color: rgba(238, 255, 0, 0.7);
+	font-size: 0.9em;
 }
 
 .empty-state {
@@ -522,12 +499,6 @@ onMounted(fetchPending);
 	color: #fca5a5;
 }
 
-.alert-success {
-	background-color: rgba(74, 222, 128, 0.2);
-	border: 2px solid #4ade80;
-	color: #86efac;
-}
-
 .form-input {
 	background-color: rgba(0, 0, 0, 0.3);
 	border: 2px solid rgb(238, 255, 0);
@@ -549,18 +520,21 @@ onMounted(fetchPending);
 	color: rgba(238, 255, 0, 0.5);
 }
 
+.form-input-sm {
+	padding: 8px 12px;
+	font-size: 0.9em;
+	min-width: 220px;
+}
 
 .btn {
-	padding: 10px 16px;
+	padding: 8px 12px;
 	border: 2px solid rgb(238, 255, 0);
 	border-radius: 6px;
-	font-size: 0.9em;
+	font-size: 0.85em;
 	font-family: inherit;
 	font-weight: 500;
 	cursor: pointer;
 	transition: all 0.3s ease;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
 }
 
 .btn-primary {
@@ -572,7 +546,6 @@ onMounted(fetchPending);
 .btn-primary:hover {
 	background-color: rgb(247, 255, 138);
 	border-color: rgb(247, 255, 138);
-	transform: scale(1.05);
 }
 
 .btn-success {
@@ -584,7 +557,6 @@ onMounted(fetchPending);
 .btn-success:hover {
 	background-color: #4ade80;
 	border-color: rgb(247, 255, 138);
-	transform: scale(1.05);
 }
 
 .btn-danger {
@@ -596,36 +568,6 @@ onMounted(fetchPending);
 .btn-danger:hover {
 	background-color: #ef4444;
 	border-color: rgb(247, 255, 138);
-	transform: scale(1.05);
-}
-
-.btn-warning {
-	background-color: rgba(249, 115, 22, 0.9);
-	color: #ffffff;
-	border-color: #f97316;
-}
-
-.btn-warning:hover {
-	background-color: #f97316;
-	border-color: rgb(247, 255, 138);
-	transform: scale(1.05);
-}
-
-.btn-info {
-	background-color: rgba(59, 130, 246, 0.9);
-	color: #ffffff;
-	border-color: #3b82f6;
-}
-
-.btn-info:hover {
-	background-color: #3b82f6;
-	border-color: rgb(247, 255, 138);
-	transform: scale(1.05);
-}
-
-.btn-sm {
-	padding: 6px 12px;
-	font-size: 0.8em;
 }
 
 .notifications-list {
@@ -669,12 +611,22 @@ onMounted(fetchPending);
 	letter-spacing: 0.5px;
 }
 
-.badge-new {
+.badge-success {
 	background-color: #4ade80;
 	color: #000000;
 }
 
-.badge-approved {
+.badge-error {
+	background-color: #ef4444;
+	color: #ffffff;
+}
+
+.badge-warning {
+	background-color: #f97316;
+	color: #ffffff;
+}
+
+.badge-info {
 	background-color: #3b82f6;
 	color: #ffffff;
 }
@@ -691,18 +643,6 @@ onMounted(fetchPending);
 }
 
 .badge-pending {
-	background-color: rgba(249, 115, 22, 0.3);
-	color: #fed7aa;
-	border: 1px solid #f97316;
-}
-
-.badge-closed {
-	background-color: rgba(239, 68, 68, 0.3);
-	color: #fca5a5;
-	border: 1px solid #ef4444;
-}
-
-.badge-hidden {
 	background-color: rgba(249, 115, 22, 0.3);
 	color: #fed7aa;
 	border: 1px solid #f97316;
@@ -852,215 +792,15 @@ onMounted(fetchPending);
 	min-width: 80px;
 }
 
-.topics-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-	gap: 15px;
+.list-scroll {
+	max-height: 320px;
+	overflow-y: auto;
+	padding-right: 6px;
 }
 
-.topic-card {
-	background-color: rgba(0, 0, 0, 0.05);
-	border: 4px solid rgb(238, 255, 0);
-	border-radius: 6px;
-	padding: 15px;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
+.list-scroll-lg {
+	max-height: 520px;
 }
-
-.topic-card:hover {
-	background-color: rgba(238, 255, 0, 0.08);
-}
-
-.topic-card-header {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.topic-name {
-	color: rgb(238, 255, 0);
-	font-size: 1.1em;
-}
-
-.topic-badges {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.topic-actions {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.topic-actions .btn {
-	flex: 1;
-	min-width: 80px;
-}
-
-.stats-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-	gap: 15px;
-	margin-bottom: 30px;
-}
-
-.stat-card {
-	background: linear-gradient(135deg, rgba(238, 255, 0, 0.1) 0%, rgba(238, 255, 0, 0.05) 100%);
-	border: 2px solid rgb(238, 255, 0);
-	border-radius: 8px;
-	padding: 20px;
-	text-align: center;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-	transform: translateY(-5px);
-	background: linear-gradient(135deg, rgba(238, 255, 0, 0.15) 0%, rgba(238, 255, 0, 0.08) 100%);
-}
-
-.stat-blue {
-	border-color: #3b82f6;
-}
-
-.stat-green {
-	border-color: #4ade80;
-}
-
-.stat-yellow {
-	border-color: rgb(238, 255, 0);
-}
-
-.stat-red {
-	border-color: #ef4444;
-}
-
-.stat-purple {
-	border-color: #a855f7;
-}
-
-.stat-orange {
-	border-color: #f97316;
-}
-
-.stat-value {
-	font-size: 2.5em;
-	font-weight: bold;
-	color: rgb(238, 255, 0);
-}
-
-.stat-label {
-	font-size: 0.95em;
-	color: rgba(238, 255, 0, 0.8);
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-}
-
-.stats-subsection {
-	margin-top: 20px;
-	padding-top: 20px;
-	border-top: 1px solid rgba(238, 255, 0, 0.2);
-}
-
-.subsection-title {
-	color: rgb(238, 255, 0);
-	margin: 0 0 15px 0;
-	font-size: 1.15em;
-}
-
-.posts-list {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
-.post-item {
-	display: flex;
-	gap: 15px;
-	background-color: rgba(238, 255, 0, 0.05);
-	border-left: 4px solid rgb(238, 255, 0);
-	padding: 12px;
-	border-radius: 4px;
-}
-
-.post-rank {
-	min-width: 40px;
-	height: 40px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background-color: rgb(238, 255, 0);
-	color: #000000;
-	border-radius: 50%;
-	font-weight: bold;
-	font-size: 1.1em;
-}
-
-.post-content {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
-.post-author {
-	font-weight: 600;
-	color: rgb(238, 255, 0);
-	font-size: 0.95em;
-}
-
-.post-text {
-	color: rgb(247, 255, 138);
-	font-size: 0.9em;
-	line-height: 1.4;
-}
-
-.post-likes {
-	color: rgba(238, 255, 0, 0.7);
-	font-size: 0.85em;
-	font-weight: 500;
-}
-
-.roles-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-	gap: 10px;
-}
-
-.role-card {
-	background-color: rgba(238, 255, 0, 0.05);
-	border: 1px solid rgb(238, 255, 0);
-	border-radius: 6px;
-	padding: 15px;
-	text-align: center;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.role-name {
-	color: rgb(238, 255, 0);
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	font-size: 0.9em;
-}
-
-.role-count {
-	color: rgb(247, 255, 138);
-	font-size: 1.8em;
-	font-weight: bold;
-}
-
-.chat-section {
-	margin-top: 30px;
-}
-
 
 @media (max-width: 768px) {
 	.admin-container {
@@ -1071,13 +811,8 @@ onMounted(fetchPending);
 		font-size: 1.8em;
 	}
 
-	.users-grid,
-	.topics-grid {
+	.users-grid {
 		grid-template-columns: 1fr;
-	}
-
-	.stats-grid {
-		grid-template-columns: repeat(2, 1fr);
 	}
 
 	.tag-input-group {
@@ -1088,13 +823,11 @@ onMounted(fetchPending);
 		max-width: 100%;
 	}
 
-	.user-card-actions,
-	.topic-actions {
+	.user-card-actions {
 		flex-direction: column;
 	}
 
-	.user-card-actions .btn,
-	.topic-actions .btn {
+	.user-card-actions .btn {
 		width: 100%;
 	}
 }
