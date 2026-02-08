@@ -41,6 +41,7 @@ onMounted(() => {
 	fetchTags();
 
 	socketStore.on('admin:users-updated', handleUsersUpdated);
+	socketStore.on('admin:notify', handleAdminNotify);
 	socketStore.on('tag:created', fetchTags);
 	socketStore.on('tag:updated', fetchTags);
 	socketStore.on('tag:deleted', fetchTags);
@@ -48,6 +49,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
 	socketStore.off('admin:users-updated', handleUsersUpdated);
+	socketStore.off('admin:notify', handleAdminNotify);
 	socketStore.off('tag:created', fetchTags);
 	socketStore.off('tag:updated', fetchTags);
 	socketStore.off('tag:deleted', fetchTags);
@@ -106,6 +108,29 @@ const addActivityEntry = (type, message, context = {}) => {
 const notify = (type, message, context = {}) => {
 	socketStore.pushNotification({ type, message });
 	addActivityEntry(type, message, context);
+};
+
+const handleAdminNotify = (data) => {
+	const message = data?.message || 'Nowe powiadomienie admina';
+	const type = data?.type || 'info';
+	addActivityEntry(type, message, data || {});
+
+	switch (data?.type) {
+		case 'new-user':
+		case 'user-approved':
+			fetchPending();
+			break;
+		case 'user-blocked':
+		case 'user-unblocked':
+			fetchBlocked();
+			fetchAllUsers();
+			break;
+		case 'user-deleted':
+			fetchAllUsers();
+			break;
+		default:
+			break;
+	}
 };
 
 const normalizeSearch = (value) => value.trim().toLowerCase();

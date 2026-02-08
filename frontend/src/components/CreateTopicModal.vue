@@ -52,9 +52,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useTopicsStore } from '../stores/topics';
 import tagService from '../services/tagService';
+import { useSocketStore } from '../stores/socket';
 
 const props = defineProps({
   show: Boolean,
@@ -68,6 +69,7 @@ const error = ref('');
 const loading = ref(false);
 const availableTags = ref([]);
 const topics = useTopicsStore();
+const socketStore = useSocketStore();
 
 const loadTags = async () => {
   loading.value = true;
@@ -113,6 +115,15 @@ const submit = async () => {
 
 onMounted(() => {
   loadTags();
+  socketStore.on('tag:created', loadTags);
+  socketStore.on('tag:updated', loadTags);
+  socketStore.on('tag:deleted', loadTags);
+});
+
+onBeforeUnmount(() => {
+  socketStore.off('tag:created', loadTags);
+  socketStore.off('tag:updated', loadTags);
+  socketStore.off('tag:deleted', loadTags);
 });
 </script>
 

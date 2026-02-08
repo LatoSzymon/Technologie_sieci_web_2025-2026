@@ -70,6 +70,20 @@ const totalPosts = ref(0);
 const totalPages = ref(0);
 const isLoadingMore = ref(false);
 
+const loadTags = async () => {
+    if (!props.showForm) return;
+    try {
+        const tags = await tagService.getTags();
+        availableTags.value = tags;
+    } catch (err) {
+        console.error('Error loading tags:', err);
+    }
+};
+
+const handleTagsChanged = () => {
+    loadTags();
+};
+
 const load = async (page = 1, mode = 'replace') => {
     try {
         const data = await postService.fetchPosts(props.topicId, page, pageSize.value);
@@ -197,15 +211,13 @@ onMounted(() => {
     console.log('Component mounted for topic:', props.topicId);
     load(1, 'replace');
 
-    // Załaduj tagi
-    tagService.getTags().then(tags => {
-        availableTags.value = tags;
-    }).catch(err => {
-        console.error('Error loading tags:', err);
-    });
+    loadTags();
 
     socketStore.on("post:new", handleNewPost);
     console.log('Listening for post:new events');
+    socketStore.on('tag:created', handleTagsChanged);
+    socketStore.on('tag:updated', handleTagsChanged);
+    socketStore.on('tag:deleted', handleTagsChanged);
 
     if (socketStore.connected) {
         console.log('Socket already connected, joining topic immediately');
@@ -216,6 +228,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
     console.log('Component unmounting');
     socketStore.off("post:new", handleNewPost);
+    socketStore.off('tag:created', handleTagsChanged);
+    socketStore.off('tag:updated', handleTagsChanged);
+    socketStore.off('tag:deleted', handleTagsChanged);
     socketStore.leaveTopic(props.topicId);
 });
 

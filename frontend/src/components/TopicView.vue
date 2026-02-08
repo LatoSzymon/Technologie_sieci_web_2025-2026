@@ -63,6 +63,10 @@ const isBlocked = computed(() => {
   return auth.blocked === true;
 });
 
+const isTopicClosed = computed(() => {
+	return topics.currentTopic?.isClosed === true;
+});
+
 const canModerate = computed(() => {
 	const topic = topics.currentTopic;
 	const userId = auth.user?._id || auth.user?.id;
@@ -345,7 +349,10 @@ watch(() => topics.currentTopic, () => {
 
 			<div class="sidebar-card post-form-card">
 				<h3 class="card-title">Odpowiedź</h3>
-				<PostList ref="postFormRef" :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="false" :show-form="true" @reply="handleReplyClick"/>
+				<div v-if="isTopicClosed" class="closed-topic-note">
+					Temat jest zamknięty. Nie można dodawać nowych postów.
+				</div>
+				<PostList ref="postFormRef" :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="false" :show-form="!isTopicClosed" @reply="handleReplyClick"/>
 			</div>
 		</aside>
 	</div>
@@ -448,6 +455,15 @@ watch(() => topics.currentTopic, () => {
 
 	.sidebar-card.post-form-card {
 		border-color: #ffff00;
+	}
+
+	.closed-topic-note {
+		background-color: rgba(255, 107, 107, 0.2);
+		border: 1px solid #ff6b6b;
+		color: #ffb3b3;
+		padding: 10px 12px;
+		margin-bottom: 12px;
+		font-size: 0.9em;
 	}
 
 	.card-title {

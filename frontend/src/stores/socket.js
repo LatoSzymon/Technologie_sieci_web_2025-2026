@@ -34,6 +34,10 @@ export const useSocketStore = defineStore('socket', () => {
         const currentPath = router.currentRoute.value?.path || '';
         return currentPath === `/topics/${topicId}`;
     };
+    const isViewingPending = () => {
+        const currentPath = router.currentRoute.value?.path || '';
+        return currentPath === '/pending';
+    };
 
     const connect = () => {
         if (socket.value?.connected) {
@@ -106,6 +110,9 @@ export const useSocketStore = defineStore('socket', () => {
             refreshTopicData(data?.topicId);
             if (isViewingTopic(data?.topicId)) {
                 pushNotification({ type: 'warning', message: data?.message || 'Temat został ukryty' });
+                leaveTopic(data?.topicId);
+                const topicsStore = useTopicsStore();
+                topicsStore.currentTopic = null;
                 router.push('/topics');
             }
         });
@@ -129,6 +136,7 @@ export const useSocketStore = defineStore('socket', () => {
                     message: data?.message || 'Zostałeś zablokowany w serwisie'
                 });
                 auth.logout();
+                router.push('/login');
             }
         });
 
@@ -142,6 +150,9 @@ export const useSocketStore = defineStore('socket', () => {
                     type: 'success',
                     message: data?.message || 'Zostałeś odblokowany'
                 });
+                if (auth.fetchUser) {
+                    auth.fetchUser();
+                }
             }
         });
 
@@ -155,6 +166,12 @@ export const useSocketStore = defineStore('socket', () => {
                     type: 'success',
                     message: data?.message || 'Twoje konto zostało zaakceptowane'
                 });
+                if (auth.fetchUser) {
+                    auth.fetchUser();
+                }
+                if (isViewingPending()) {
+                    router.push('/');
+                }
             }
         });
 
@@ -163,12 +180,24 @@ export const useSocketStore = defineStore('socket', () => {
             const postStore = usePostStore();
             const topicId = post.topicId?._id || post.topicId;
             postStore.addPost(topicId, post);
+            if (topicId && !isViewingTopic(topicId)) {
+                pushNotification({
+                    type: 'info',
+                    message: 'Nowy post w temacie'
+                });
+            }
         });
 
         socket.value.on('post:deleted', (data) => {
             console.log('[WebSocket] post:deleted received', data);
             const postStore = usePostStore();
             postStore.removePost(data.topicId, data.postId);
+            if (data?.topicId && isViewingTopic(data.topicId)) {
+                pushNotification({
+                    type: 'warning',
+                    message: 'Post został usunięty'
+                });
+            }
         });
 
         socket.value.on('post:updated', (post) => {
@@ -177,6 +206,12 @@ export const useSocketStore = defineStore('socket', () => {
             const topicId = post.topicId?._id || post.topicId || currentTopicId.value;
             if (topicId) {
                 postStore.updatePost(topicId, post);
+                if (isViewingTopic(topicId)) {
+                    pushNotification({
+                        type: 'info',
+                        message: 'Post został zaktualizowany'
+                    });
+                }
             }
         });
 
@@ -280,6 +315,8 @@ export const useSocketStore = defineStore('socket', () => {
                     message: data?.message || 'Zostałeś zablokowany w tym temacie'
                 });
                 if (isViewingTopic(data?.topicId)) {
+                    leaveTopic(data?.topicId);
+                    topicsStore.currentTopic = null;
                     router.push('/topics');
                 }
                 return;
@@ -321,6 +358,10 @@ export const useSocketStore = defineStore('socket', () => {
 
         socket.value.on('user:profileUpdated', () => {
             pushNotification({ type: 'success', message: 'Profil zostal zaktualizowany' });
+            const auth = authStore();
+            if (auth.fetchUser) {
+                auth.fetchUser();
+            }
         });
 
         socket.value.on('user:securityUpdated', () => {
