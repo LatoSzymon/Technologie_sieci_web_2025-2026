@@ -66,7 +66,22 @@ export const usePostStore = defineStore('posts', () => {
         }
     };
 
+    const updatePost = (topicId, updatedPost) => {
+        const current = postsByTopic.value.get(topicId) || [];
+        const updatedId = updatedPost?._id || updatedPost?.id;
+        if (!updatedId) return;
+
+        const idx = current.findIndex(p => (p._id || p.id) === updatedId);
+        if (idx === -1) return;
+
+        current[idx] = {
+            ...current[idx],
+            ...updatedPost
+        };
+        postsByTopic.value.set(topicId, current);
+    };
+
     return {
-        postsByTopic, paginationByTopic, getPosts, getPagination, setPosts, addPost, removePost, updatePostLikes
+        postsByTopic, paginationByTopic, getPosts, getPagination, setPosts, addPost, removePost, updatePostLikes, updatePost
     };
 });

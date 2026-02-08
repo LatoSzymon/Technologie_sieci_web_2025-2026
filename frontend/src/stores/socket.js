@@ -171,6 +171,15 @@ export const useSocketStore = defineStore('socket', () => {
             postStore.removePost(data.topicId, data.postId);
         });
 
+        socket.value.on('post:updated', (post) => {
+            console.log('[WebSocket] post:updated received', post);
+            const postStore = usePostStore();
+            const topicId = post.topicId?._id || post.topicId || currentTopicId.value;
+            if (topicId) {
+                postStore.updatePost(topicId, post);
+            }
+        });
+
         socket.value.on('post:liked', (data) => {
             console.log('[WebSocket] post:liked received', data);
             const postStore = usePostStore();
@@ -185,6 +194,36 @@ export const useSocketStore = defineStore('socket', () => {
                 type: data?.type || 'info',
                 message: data?.message || 'Nowe powiadomienie admina'
             });
+        });
+
+        socket.value.on('moderator:promoted', (data) => {
+            if (data?.message) {
+                pushNotification({ type: 'success', message: data.message });
+            }
+            if (data?.topicId) {
+                refreshTopicData(data.topicId);
+            }
+        });
+
+        socket.value.on('moderator:removed', (data) => {
+            if (data?.message) {
+                pushNotification({ type: 'warning', message: data.message });
+            }
+            if (data?.topicId) {
+                refreshTopicData(data.topicId);
+            }
+        });
+
+        socket.value.on('topic:moderatorAdded', (data) => {
+            if (data?.topicId) {
+                refreshTopicData(data.topicId);
+            }
+        });
+
+        socket.value.on('topic:moderatorRemoved', (data) => {
+            if (data?.topicId) {
+                refreshTopicData(data.topicId);
+            }
         });
 
         socket.value.on('topic:userBlocked', (data) => {
@@ -225,6 +264,19 @@ export const useSocketStore = defineStore('socket', () => {
                 if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
                     refreshTopicData(data.topicId);
                 }
+            }
+        });
+
+        socket.value.on('user:deleted', (data) => {
+            const auth = authStore();
+            const userId = auth.user?._id || auth.user?.id;
+            if (data?.userId && data.userId === userId) {
+                pushNotification({
+                    type: 'error',
+                    message: data?.message || 'Twoje konto zostało usunięte'
+                });
+                auth.logout();
+                router.push('/login');
             }
         });
     };

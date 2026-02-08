@@ -41,10 +41,16 @@ onMounted(() => {
 	fetchTags();
 
 	socketStore.on('admin:users-updated', handleUsersUpdated);
+	socketStore.on('tag:created', fetchTags);
+	socketStore.on('tag:updated', fetchTags);
+	socketStore.on('tag:deleted', fetchTags);
 });
 
 onBeforeUnmount(() => {
 	socketStore.off('admin:users-updated', handleUsersUpdated);
+	socketStore.off('tag:created', fetchTags);
+	socketStore.off('tag:updated', fetchTags);
+	socketStore.off('tag:deleted', fetchTags);
 });
 
 const fetchPending = async () => {
