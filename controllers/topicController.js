@@ -112,7 +112,7 @@ const blockUserInTopic = async (req, res) => {
         try {
             const io = req.app.get && req.app.get('io');
             if (io) {
-                io.to(`topic:${topicId}`).emit('topic:userBlocked', {
+                const payload = {
                     userId,
                     topicId,
                     exceptTopicIds,
@@ -121,7 +121,9 @@ const blockUserInTopic = async (req, res) => {
                         bannedUsersIds: topic.bannedUsersIds,
                         blockedUserExceptions: topic.blockedUserExceptions
                     }
-                });
+                };
+                io.to(`topic:${topicId}`).emit('topic:userBlocked', payload);
+                io.to(`user:${userId}`).emit('topic:userBlocked', payload);
             }
         } catch (e) {
             console.error('WebSocket error (blockUser):', e);

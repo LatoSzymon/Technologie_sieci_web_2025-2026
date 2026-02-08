@@ -41,6 +41,16 @@ const addTag = async (req, res) => {
         });
 
         await tag.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.emit('tag:created', { tagId: tag._id, tag });
+            }
+        } catch (e) {
+            console.error('WebSocket error (addTag):', e);
+        }
+
         return res.status(201).json({message: "Tag dodany", tag});
     } catch (err) {
         console.error(err);
@@ -65,6 +75,16 @@ const deleteTag = async (req, res) => {
             { tags: tag._id },
             { $pull: { tags: tag._id } }
         );
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.emit('tag:deleted', { tagId });
+            }
+        } catch (e) {
+            console.error('WebSocket error (deleteTag):', e);
+        }
+
         return res.status(204).json({message: "Usunięto tag"});
     } catch (err) {
         console.error(err);
@@ -77,6 +97,16 @@ const updateTag = async (req, res) => {
         const tagId = req.params.tagId;
         const newName = req.body.newName;
         const updated = await Tag.findByIdAndUpdate(tagId, {name: newName}, {new: true});
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.emit('tag:updated', { tagId, tag: updated });
+            }
+        } catch (e) {
+            console.error('WebSocket error (updateTag):', e);
+        }
+
         return res.status(201).json({message: "Zaktualizowano tag", updated})
     } catch (err) {
         return res.status(500).json({message: "Aktualizacja tagu się nie powiodła", updated});

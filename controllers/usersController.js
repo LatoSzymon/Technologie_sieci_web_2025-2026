@@ -147,6 +147,15 @@ const updateProfile = async (req, res) => {
             { login: login || undefined },
             { new: true, select: '-hash' }
         );
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('user:profileUpdated', { userId, user });
+            }
+        } catch (e) {
+            console.error('WebSocket error (updateProfile):', e);
+        }
         
         return res.status(200).json({ message: "Profil zaktualizowany", user });
     } catch (error) {
@@ -194,6 +203,15 @@ const changePassword = async (req, res) => {
         const newHash = await bcrypt.hash(newPassword, 12);
         user.hash = newHash;
         await user.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('user:securityUpdated', { userId });
+            }
+        } catch (e) {
+            console.error('WebSocket error (changePassword):', e);
+        }
         
         return res.status(200).json({ 
             message: "Hasło zostało zmienione" 

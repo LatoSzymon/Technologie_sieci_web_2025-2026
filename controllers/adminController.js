@@ -132,6 +132,7 @@ const approveUser = async (req, res) => {
                 });
 
                 io.to(`user:${user._id}`).emit('user:approved', { userId: user._id, message: 'Twoje konto zostało zaakceptowane!' });
+                io.to('admins').emit('admin:users-updated', { type: 'approved', user });
                 console.log(`Emitted user:approved to user:${user._id}`);
             }
         } catch (e) {
@@ -272,6 +273,8 @@ const deleteUser = async (req, res) => {
                     userId: user._id,
                     message: `Użytkownik usunięty: ${user.login}`
                 });
+                io.to(`user:${user._id}`).emit('user:deleted', { userId: user._id, message: 'Twoje konto zostało usunięte przez administratora' });
+                io.to('admins').emit('admin:users-updated', { type: 'deleted', user });
             }
         } catch (e) {
             console.error('WebSocket error (deleteUser):', e);
