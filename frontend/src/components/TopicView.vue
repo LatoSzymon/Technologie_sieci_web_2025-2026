@@ -87,6 +87,22 @@ const canRemoveModerator = computed(() => {
 	return isOwner;
 });
 
+const ownerLogin = computed(() => {
+	const owner = topics.currentTopic?.ownerId;
+	if (!owner) return '';
+	return typeof owner === 'object' ? owner.login : String(owner);
+});
+
+const ownerBlocked = computed(() => {
+	const owner = topics.currentTopic?.ownerId;
+	if (!owner || typeof owner !== 'object') return false;
+	return owner.isBlocked === true;
+});
+
+const canTransferOwner = computed(() => {
+	return auth.user?.role === 'admin' && ownerBlocked.value;
+});
+
 const showCreateSubtopic = ref(false);
 const showPromoteModal = ref(false);
 const showRemoveModal = ref(false);
@@ -128,6 +144,20 @@ const openRemoveModal = (moderator) => {
 
 const handleRemoved = () => {
 	topics.fetchTopic(route.params.id);
+};
+
+const transferOwner = async (moderator) => {
+	try {
+		const topicId = topics.currentTopic?._id;
+		if (!topicId) return;
+		const moderatorId = typeof moderator === 'object' ? moderator._id : moderator;
+		const moderatorLogin = typeof moderator === 'object' ? moderator.login : 'wybrany moderator';
+		if (!confirm(`Ustawić ${moderatorLogin} jako właściciela tematu?`)) return;
+		await topicService.transferTopicOwner(topicId, moderatorId);
+		await topics.fetchTopic(topicId);
+	} catch (e) {
+		console.error(e);
+	}
 };
 
 const initEditForm = () => {
@@ -197,7 +227,8 @@ watch(() => topics.currentTopic, () => {
 
 				<div class="topic-meta">
 					<div v-if="topics.currentTopic.ownerId" class="meta-item">
-						<strong>Właściciel:</strong> {{ topics.currentTopic.ownerId.login }}
+						<strong>Właściciel:</strong> {{ ownerLogin }}
+						<span v-if="ownerBlocked" class="badge badge-owner-blocked">zablokowany</span>
 					</div>
 					<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length" class="meta-item">
 						<strong>Moderatorzy:</strong>
@@ -211,6 +242,14 @@ watch(() => topics.currentTopic, () => {
 								title="Usuń moderatora"
 							>
 								x
+							</button>
+							<button 
+								v-if="canTransferOwner"
+								@click="transferOwner(mod)"
+								class="make-owner-btn"
+								title="Ustaw jako właściciela"
+							>
+								owner
 							</button>
 						</span>
 					</div>
@@ -229,7 +268,8 @@ watch(() => topics.currentTopic, () => {
 				<div class="topic-meta">
 					<div v-if="topics.currentTopic.ownerId" class="meta-item">
 						<span class="meta-label">Właściciel:</span>
-						<span class="meta-value">{{ topics.currentTopic.ownerId.login }}</span>
+						<span class="meta-value">{{ ownerLogin }}</span>
+						<span v-if="ownerBlocked" class="badge badge-owner-blocked">zablokowany</span>
 					</div>
 					<div v-if="topics.currentTopic.moderatorsId && topics.currentTopic.moderatorsId.length" class="meta-item">
 						<span class="meta-label">Moderatorzy:</span>
@@ -243,6 +283,14 @@ watch(() => topics.currentTopic, () => {
 								title="Usuń moderatora"
 							>
 								x
+							</button>
+							<button 
+								v-if="canTransferOwner"
+								@click="transferOwner(mod)"
+								class="make-owner-btn"
+								title="Ustaw jako właściciela"
+							>
+								owner
 							</button>
 							</span>
 						</div>
@@ -471,6 +519,12 @@ watch(() => topics.currentTopic, () => {
 		color: white;
 	}
 
+	.badge-owner-blocked {
+		background-color: #ff3b3b;
+		color: #ffffff;
+		margin-left: 8px;
+	}
+
 	.topic-description {
 		font-size: 1.1em;
 		color: #ddd;
@@ -611,6 +665,23 @@ watch(() => topics.currentTopic, () => {
 	.remove-moderator-btn:hover {
 		color: #cc0000;
 		transform: scale(1.2);
+	}
+
+	.make-owner-btn {
+		background: none;
+		border: none;
+		color: #000000;
+		cursor: pointer;
+		font-size: 0.8em;
+		padding: 0 4px;
+		margin-left: 6px;
+		text-transform: uppercase;
+		font-weight: bold;
+	}
+
+	.make-owner-btn:hover {
+		color: #111111;
+		text-decoration: underline;
 	}
 
 	.moderators-container {

@@ -244,7 +244,7 @@ const getTopicById = async (req, res) => {
     try {
         const id = req.params.topicId;
         const topic = await Topic.findById(id)
-            .populate('ownerId', 'login mail')
+            .populate('ownerId', 'login mail isBlocked')
             .populate('moderatorsId', 'login mail')
             .populate('children', 'name description')
             .populate('tags');
@@ -636,6 +636,77 @@ const removeModerator = async (req, res) => {
     }
 };
 
+const transferTopicOwner = async (req, res) => {
+    try {
+        const { topicId, userId } = req.body;
+
+        if (!topicId || !userId) {
+            return res.status(400).json({
+                message: "topicId i userId są wymagane"
+            });
+        }
+
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                message: "Tylko administrator może zmienić właściciela tematu"
+            });
+        }
+
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            return res.status(404).json({ message: "Temat nie istnieje" });
+        }
+
+        if (topic.ownerId.equals(userId)) {
+            return res.status(409).json({ message: "Ten użytkownik już jest właścicielem" });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Użytkownik nie istnieje" });
+        }
+
+        if (user.isBlocked) {
+            return res.status(409).json({ message: "Nie można nadać roli właściciela zablokowanemu użytkownikowi" });
+        }
+
+        if (!topic.moderatorsId.some(id => id.equals(userId))) {
+            return res.status(409).json({ message: "Nowy właściciel musi być moderatorem tematu" });
+        }
+
+        topic.ownerId = userId;
+        topic.moderatorsId = topic.moderatorsId.filter(id => !id.equals(userId));
+        await topic.save();
+
+        try {
+            const io = req.app.get && req.app.get('io');
+            if (io) {
+                io.to(`topic:${topicId}`).emit('topic:updated', {
+                    topicId: topic._id,
+                    action: 'owner-changed',
+                    topic: {
+                        _id: topic._id,
+                        ownerId: topic.ownerId,
+                        moderatorsId: topic.moderatorsId
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('WebSocket error (transferTopicOwner):', e);
+        }
+
+        return res.status(200).json({
+            message: "Właściciel tematu został zmieniony",
+            topic
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Błąd przy zmianie właściciela tematu",
+            error
+        });
+    }
+};
+
 const getEligibleUsersForModerator = async (req, res) => {
     try {
         const { topicId } = req.params;
@@ -970,4 +1041,4 @@ const unhideTopic = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic, getAllSubtopics };
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, transferTopicOwner, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic, getAllSubtopics };

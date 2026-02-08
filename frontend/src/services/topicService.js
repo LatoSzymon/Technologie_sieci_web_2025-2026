@@ -60,6 +60,11 @@ const removeModerator = async (topicId, userId) => {
     return res.data;
 };
 
+const transferTopicOwner = async (topicId, userId) => {
+    const res = await api.post('/topics/transfer-owner', { topicId, userId });
+    return res.data;
+};
+
 const listTopics = async ({ parentId, page, limit } = {}) => {
     const params = {};
     if (parentId) params.parentId = parentId;
@@ -70,4 +75,4 @@ const listTopics = async ({ parentId, page, limit } = {}) => {
     return res.data;
 };
 
-export { listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, getTopicParticipants, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator };
+export { listTopics, getTopicById, getTopicTree, getTopicSubtree, getTopicUsers, getTopicParticipants, blockUserInTopic, unblockUserInTopic, createSubtopic, createTopic, updateTopic, promoteModerator, removeModerator, transferTopicOwner };
