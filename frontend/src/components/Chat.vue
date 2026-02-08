@@ -51,7 +51,7 @@ const send = () => {
 </script>
 
 <template>
-	<div>
+	<div class="chat-container">
 		<div class="chat-controls">
 			<div v-if="isAdmin">
 				<select v-model="toUserId" class="user-select">
@@ -65,9 +65,9 @@ const send = () => {
 			<button @click="send" class="send-button">Wyślij</button>
 		</div>
 
-		<ul>
-			<li v-for="(m, idx) in messages" :key="idx">
-				<small>{{ m.ts.toLocaleTimeString() }}</small>
+		<ul class="chat-list">
+			<li v-for="(m, idx) in messages" :key="idx" class="chat-item">
+				<small class="chat-time">{{ m.ts.toLocaleTimeString() }}</small>
 				<span v-if="m.type==='notify'"> [Powiadomienie] {{ m.payload.message }}</span>
 				<span v-else-if="m.type==='sent-admin'"> [Wysłano do {{ m.payload.toUserId }}] {{ m.payload.message }}</span>
 				<span v-else> [Wysłano] {{ m.payload.message }}</span>
@@ -75,3 +75,64 @@ const send = () => {
 		</ul>
 	</div>
 </template>
+
+<style scoped>
+.chat-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  padding: 12px;
+}
+
+.user-select,
+.message-input {
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  background: #0d0d0d;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.message-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.send-button {
+  background: var(--accent);
+  border: 2px solid var(--border);
+  padding: 8px 14px;
+}
+
+.chat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  background: #101010;
+}
+
+.chat-time {
+  color: var(--text-soft);
+  margin-right: 8px;
+}
+</style>

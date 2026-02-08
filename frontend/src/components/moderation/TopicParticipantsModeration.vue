@@ -289,12 +289,12 @@ watch(() => props.topic, () => {
 }
 
 .search-input {
-  margin: none;
-  width: 90%;
+  margin: 0;
+  width: 100%;
   padding: 10px 12px;
-  border: 2px solid #ffff00;
-  background-color: #1a1a1a;
-  color: #ffff00;
+  border: 2px solid var(--border);
+  background-color: #111111;
+  color: var(--accent);
   font-family: "Pixelify Sans", sans-serif;
 }
 
@@ -362,8 +362,8 @@ watch(() => props.topic, () => {
 
 .exceptions-toggle {
   background-color: transparent;
-  border: 1px solid #ffff00;
-  color: #ffff00;
+  border: 1px solid var(--border);
+  color: var(--accent);
   padding: 6px 10px;
   cursor: pointer;
   font-family: "Pixelify Sans", sans-serif;
@@ -397,9 +397,9 @@ watch(() => props.topic, () => {
 
 .btn-save {
   align-self: flex-start;
-  background-color: #ffff00;
+  background-color: var(--accent);
   color: #000;
-  border: none;
+  border: 2px solid var(--border);
   padding: 8px 12px;
   font-weight: bold;
   cursor: pointer;

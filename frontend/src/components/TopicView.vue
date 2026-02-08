@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch, computed, ref } from 'vue';
+import { onMounted, onBeforeUnmount, watch, computed, ref, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../stores/topics';
 import { authStore } from '../stores/auth';
@@ -116,6 +116,8 @@ const isEditingTopic = ref(false);
 const editForm = ref({ name: '', description: '' });
 const editError = ref('');
 const postFormRef = ref(null);
+const showReplyJump = ref(true);
+let replyObserver = null;
 
 const handleBlocked = (payload) => {
 	if (payload?.bannedUsersIds && topics.currentTopic) {
@@ -134,6 +136,10 @@ const handleReplyClick = (replyData) => {
 	if (postFormRef.value) {
 		postFormRef.value.handleReplyFromMain(replyData);
 	}
+};
+
+const scrollToReply = () => {
+	postFormRef.value?.scrollToForm?.();
 };
 
 const handlePromoted = () => {
@@ -193,6 +199,30 @@ const cancelEdit = () => {
 
 watch(() => topics.currentTopic, () => {
 	initEditForm();
+	nextTick(() => {
+		const target = postFormRef.value?.$el;
+		if (!target) {
+			showReplyJump.value = true;
+			return;
+		}
+		if (replyObserver) {
+			replyObserver.disconnect();
+		}
+		replyObserver = new IntersectionObserver(
+			(entries) => {
+				showReplyJump.value = !entries[0]?.isIntersecting;
+			},
+			{ root: null, threshold: 0.2 }
+		);
+		replyObserver.observe(target);
+	});
+});
+
+onBeforeUnmount(() => {
+	if (replyObserver) {
+		replyObserver.disconnect();
+		replyObserver = null;
+	}
 });
 </script>
 
@@ -221,7 +251,6 @@ watch(() => topics.currentTopic, () => {
 				<p class="topic-description">{{ topics.currentTopic.description }}</p>
 				
 				<div v-if="topics.currentTopic.tags && topics.currentTopic.tags.length" class="tags-section">
-					<h4>Tagi tematu:</h4>
 					<div class="tags-list">
 						<span v-for="tag in topics.currentTopic.tags" :key="tag._id || tag" class="tag-badge">
 							#{{ typeof tag === 'object' ? tag.name : tag }}
@@ -264,6 +293,13 @@ watch(() => topics.currentTopic, () => {
 			<div class="discussion-section">
 				<PostList :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="true" :show-form="false" @reply="handleReplyClick"/>
 			</div>
+
+
+				<div v-if="isTopicClosed" class="closed-topic-note">
+					Temat jest zamknięty. Nie można dodawać nowych postów.
+				</div>
+				<PostList ref="postFormRef" :topic-id="topics.currentTopic._id" :is-sidebar="false" :show-posts="false" :show-form="!isTopicClosed" @reply="handleReplyClick"/>
+
 		</div>
 
 		<aside class="topic-sidebar">
@@ -347,14 +383,15 @@ watch(() => topics.currentTopic, () => {
 				/>
 			</div>
 
-			<div class="sidebar-card post-form-card">
-				<h3 class="card-title">Odpowiedź</h3>
-				<div v-if="isTopicClosed" class="closed-topic-note">
-					Temat jest zamknięty. Nie można dodawać nowych postów.
-				</div>
-				<PostList ref="postFormRef" :topic-id="topics.currentTopic._id" :is-sidebar="true" :show-posts="false" :show-form="!isTopicClosed" @reply="handleReplyClick"/>
-			</div>
 		</aside>
+		<button
+			v-if="showReplyJump"
+			type="button"
+			class="reply-jump-btn"
+			@click="scrollToReply"
+		>
+			Napisz odpowiedź
+		</button>
 	</div>
 		<div v-else class="empty-message">
 			Nie znaleziono tematu.
@@ -384,8 +421,8 @@ watch(() => topics.currentTopic, () => {
 
 <style scoped>
 	.topic-view-container {
-		padding: 20px;
-		background-color: #000000;
+		padding: 24px;
+		background-color: var(--bg);
 		min-height: 100vh;
 	}
 
@@ -395,9 +432,9 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.alert-danger {
-		background-color: #ff6b6b;
-		color: white;
-		border: 2px solid #ff5252;
+		background-color: rgba(244, 107, 107, 0.2);
+		color: var(--text);
+		border: 2px solid var(--danger);
 	}
 
 	.loading-message,
@@ -409,10 +446,11 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.error-message {
-		background-color: #ff6b6b;
-		color: white;
+		background-color: rgba(244, 107, 107, 0.2);
+		color: var(--text);
 		padding: 10px;
 		margin: 10px 0;
+		border-left: 4px solid var(--danger);
 	}
 
 	.topic-content {
@@ -422,66 +460,66 @@ watch(() => topics.currentTopic, () => {
 
 	.topic-layout {
 		display: grid;
-		grid-template-columns: 1fr 460px;
-		gap: 30px;
-		max-width: 1400px;
+		grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+		gap: 24px;
+		max-width: 1320px;
 		margin: 0 auto;
 	}
 
 	.topic-main {
 		display: flex;
 		flex-direction: column;
-		gap: 30px;
+		gap: 22px;
 	}
 
 	.topic-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
+		gap: 16px;
 		height: fit-content;
 		position: sticky;
-		top: 20px;
+		top: 16px;
 	}
 
 	.sidebar-card {
-		background-color: #2d2d2d;
-		border: 2px solid #ffff00;
-		padding: 20px;
+		background-color: var(--panel);
+		border: 2px solid var(--border);
+		padding: 18px;
 	}
 
 	.sidebar-card.moderation-card {
-		border-color: #ffff00;
+		border-color: var(--border);
 	}
 
 	.sidebar-card.post-form-card {
-		border-color: #ffff00;
+		border-color: var(--border);
 	}
 
 	.closed-topic-note {
-		background-color: rgba(255, 107, 107, 0.2);
-		border: 1px solid #ff6b6b;
-		color: #ffb3b3;
+		background-color: rgba(244, 107, 107, 0.16);
+		border: 1px solid var(--danger);
+		color: var(--text);
 		padding: 10px 12px;
 		margin-bottom: 12px;
 		font-size: 0.9em;
 	}
 
 	.card-title {
-		color: #ffff00;
-		margin: 0 0 15px 0;
+		color: var(--accent);
+		margin: 0 0 12px 0;
 		font-size: 1em;
-		border-bottom: 1px solid #ffff00;
+		border-bottom: 1px solid var(--border);
 		padding-bottom: 8px;
 	}
 
 	.sidebar-card.moderation-card .card-title {
-		border-bottom-color: #ffff00;
-		color: #ffff00;
+		border-bottom-color: var(--border);
+		color: var(--accent);
 	}
 
 	.sidebar-card.post-form-card .card-title {
-		border-bottom-color: #ffff00;
-		color: #ffff00;
+		border-bottom-color: var(--border);
+		color: var(--accent);
 	}
 
 	.btn-block {
@@ -490,9 +528,9 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.topic-header-section {
-		background-color: #2d2d2d;
-		border: 2px solid #ffff00;
-		padding: 30px;
+		background-color: var(--panel);
+		border: 2px solid var(--border);
+		padding: 22px;
 		margin-bottom: 0;
 	}
 
@@ -507,7 +545,7 @@ watch(() => topics.currentTopic, () => {
 	.topic-title {
 		font-size: 2em;
 		font-weight: bold;
-		color: #ffff00;
+		color: var(--accent);
 		margin: 0;
 		flex: 1;
 	}
@@ -526,24 +564,24 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.badge-closed {
-		background-color: #ff6b6b;
-		color: white;
+		background-color: var(--danger);
+		color: #000;
 	}
 
 	.badge-hidden {
-		background-color: #ffa500;
-		color: white;
+		background-color: var(--warning);
+		color: #000;
 	}
 
 	.badge-owner-blocked {
-		background-color: #ff3b3b;
-		color: #ffffff;
+		background-color: var(--danger);
+		color: #000;
 		margin-left: 8px;
 	}
 
 	.topic-description {
 		font-size: 1.1em;
-		color: #ddd;
+		color: var(--text);
 		line-height: 1.6;
 		margin: 0 0 20px 0;
 	}
@@ -552,24 +590,22 @@ watch(() => topics.currentTopic, () => {
 		margin-bottom: 20px;
 	}
 
-	.tags-section h4 {
-		margin: 0 0 10px 0;
-		color: #ffff00;
-	}
-
 	.tags-list {
 		display: flex;
 		gap: 10px;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: 2px;
 	}
 
 	.tag-badge {
-		background-color: #1a5a1a;
-		color: #ffff00;
+		background-color: #14301c;
+		color: var(--accent);
 		padding: 6px 12px;
 		border-radius: 4px;
 		font-size: 0.9em;
-		border: 1px solid #ffff00;
+		border: 1px solid var(--border-soft);
+		white-space: nowrap;
 	}
 
 	.topic-meta {
@@ -581,19 +617,19 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.meta-item {
-		color: #aaa;
+		color: var(--text-soft);
 		font-size: 0.95em;
 	}
 
 	.meta-label {
-		color: #ffff00;
+		color: var(--accent);
 		font-weight: bold;
 		display: block;
 		margin-bottom: 5px;
 	}
 
 	.meta-value {
-		color: #ddd;
+		color: var(--text);
 	}
 
 	.moderators-list {
@@ -607,8 +643,8 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.subtopics-section h3 {
-		color: #ffff00;
-		border-bottom: 2px solid #ffff00;
+		color: var(--accent);
+		border-bottom: 2px solid var(--border);
 		padding-bottom: 10px;
 		margin-bottom: 15px;
 	}
@@ -622,14 +658,14 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.subtopic-item {
-		background-color: #2d2d2d;
-		border: 1px solid #ffff00;
+		background-color: var(--panel-2);
+		border: 1px solid var(--border);
 		padding: 12px;
-		color: #eee;
+		color: var(--text);
 	}
 
 	.subtopic-link {
-		color: #ffff00;
+		color: var(--accent);
 		text-decoration: none;
 	}
 
@@ -646,30 +682,31 @@ watch(() => topics.currentTopic, () => {
 
 	.topic-sidebar .subtopic-item {
 		padding: 10px;
-		border: 1px solid #ffff00;
-		background-color: #2d2d2d;
+		border: 1px solid var(--border);
+		background-color: var(--panel-2);
 	}
 
 	.moderator-badge {
-		display: inline-block;
-		background-color: #ffff00;
-		color: rgb(255, 0, 0);
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background-color: var(--accent);
+		color: #8a0000;
 		padding: 4px 10px;
 		font-size: 0.9em;
-		margin-left: 5px;
-		margin-right: 5px;
+		margin: 0;
 		position: relative;
 		transition: all 0.2s ease;
 	}
 
 	.moderator-badge:hover {
-		background-color: #e6e600;
+		background-color: var(--accent-strong);
 	}
 
 	.remove-moderator-btn {
 		background: none;
 		border: none;
-		color: rgb(255, 0, 0);
+		color: var(--danger);
 		cursor: pointer;
 		font-size: 1em;
 		padding: 0 4px;
@@ -679,14 +716,14 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.remove-moderator-btn:hover {
-		color: #cc0000;
+		color: var(--danger);
 		transform: scale(1.2);
 	}
 
 	.make-owner-btn {
 		background: none;
 		border: none;
-		color: #000000;
+		color: #111111;
 		cursor: pointer;
 		font-size: 0.8em;
 		padding: 0 4px;
@@ -708,16 +745,16 @@ watch(() => topics.currentTopic, () => {
 	}
 
 	.moderation-panel {
-		background-color: #2d2d2d;
-		border: 2px solid #ffff00;
+		background-color: var(--panel-2);
+		border: 2px solid var(--border);
 		padding: 25px;
 		margin-bottom: 30px;
 	}
 
 	.panel-title {
-		color: #ffff00;
+		color: var(--accent);
 		margin-top: 0;
-		border-bottom: 1px solid #ffff00;
+		border-bottom: 1px solid var(--border);
 		padding-bottom: 8px;
 	}
 
@@ -727,8 +764,8 @@ watch(() => topics.currentTopic, () => {
 
 	.edit-form {
 		background-color: rgba(0, 0, 0, 0.3);
-		padding: 15px;
-		margin-top: 15px;
+		padding: 14px;
+		margin-top: 12px;
 	}
 
 	.form-group {
@@ -738,7 +775,7 @@ watch(() => topics.currentTopic, () => {
 	.form-group label,
 	.form-label {
 		display: block;
-		color: #ffff00;
+		color: var(--accent);
 		font-weight: bold;
 		margin-bottom: 5px;
 	}
@@ -747,8 +784,8 @@ watch(() => topics.currentTopic, () => {
 	.form-textarea {
 		width: 100%;
 		padding: 10px;
-		border: 2px solid #ffff00;
-		background-color: #1a1a1a;
+		border: 2px solid var(--border);
+		background-color: #111111;
 		color: #fff;
 		font-family: "Pixelify Sans", sans-serif;
 		box-sizing: border-box;
@@ -757,12 +794,12 @@ watch(() => topics.currentTopic, () => {
 	.form-input:focus,
 	.form-textarea:focus {
 		outline: none;
-		border-color: #ffff00;
+		border-color: var(--accent-strong);
 	}
 
 	.form-textarea {
 		resize: vertical;
-		min-height: 100px;
+		min-height: 120px;
 	}
 
 	.form-actions {
@@ -783,55 +820,85 @@ watch(() => topics.currentTopic, () => {
 		font-weight: bold;
 		cursor: pointer;
 		font-family: "Pixelify Sans", sans-serif;
+		border-radius: 4px;
 	}
 
 	.btn-primary {
-		background-color: #ffff00;
+		background-color: var(--accent);
 		color: #000;
 	}
 
 	.btn-primary:hover {
-		background-color: #e6e600;
+		background-color: var(--accent-strong);
 	}
 
 	.btn-success {
-		background-color: #ffff00;
+		background-color: var(--success);
 		color: #000;
 	}
 
 	.btn-success:hover {
-		background-color: #e6e600;
+		background-color: var(--success);
 	}
 
 	.btn-secondary {
-		background-color: #666;
-		color: #fff;
+		background-color: #2b2b2b;
+		color: var(--text);
 	}
 
 	.btn-secondary:hover {
-		background-color: #555;
+		background-color: #3b3b3b;
 	}
 
 	.btn-warning {
-		background-color: #ffff00;
+		background-color: var(--warning);
 		color: #000;
 	}
 
 	.btn-warning:hover {
-		background-color: #e6e600;
+		background-color: var(--warning);
 	}
 
 	.btn-info {
-		background-color: #ffff00;
+		background-color: var(--accent);
 		color: #000;
 	}
 
 	.btn-info:hover {
-		background-color: #e6e600;
+		background-color: var(--accent-strong);
+	}
+
+	.reply-panel {
+		background-color: var(--panel);
+		border: 2px solid var(--border);
+		padding: 18px;
 	}
 
 	.discussion-section {
 		margin-top: 0;
+	}
+
+	.reply-panel .post-list-container {
+		max-width: 100%;
+	}
+
+	.reply-jump-btn {
+		position: fixed;
+		left: 50%;
+		bottom: 28px;
+		transform: translateX(-50%);
+		z-index: 40;
+		border: 2px solid #0a0a0a;
+		background: var(--warning);
+		color: #000;
+		padding: 12px 18px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
+	}
+
+	.reply-jump-btn:hover {
+		background: #ffd166;
 	}
 
 	/* Responsywność */

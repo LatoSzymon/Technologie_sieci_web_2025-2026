@@ -129,55 +129,66 @@ onBeforeUnmount(() => {
 
 <style scoped>
     .topics-container {
-        padding: 20px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        gap: 16px;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
     .search-section {
-        margin: 20px 0;
-        padding: 15px;
+        margin: 0;
+        padding: 14px;
         display: flex;
-        gap: 15px;
+        gap: 12px;
         flex-wrap: wrap;
+        align-items: center;
+        background: var(--panel);
+        border: 2px solid var(--border);
     }
 
     input {
-        padding: 10px;
-        min-width: 20vw;
-        border: 2px solid yellow;
-        border-radius: 5px;
+        padding: 10px 12px;
+        min-width: min(320px, 100%);
+        border: 2px solid var(--border);
+        border-radius: 4px;
         font-family: "Pixelify Sans", sans-serif;
+        background: #0e0e0e;
+        color: var(--text);
     }
 
     select {
-        padding: 10px;
-        border: 2px solid yellow;
-        border-radius: 5px;
+        padding: 10px 12px;
+        border: 2px solid var(--border);
+        border-radius: 4px;
         font-family: "Pixelify Sans", sans-serif;
+        background: #0e0e0e;
+        color: var(--text);
+        min-width: 220px;
     }
 
     .create-btn {
-        margin: 20px 0;
-        padding: 10px 20px;
-        border: 2px solid yellow;
-        border-radius: 5px;
+        margin: 0;
+        padding: 10px 16px;
+        border: 2px solid var(--border);
+        border-radius: 4px;
         font-family: "Pixelify Sans", sans-serif;
         cursor: pointer;
-        background-color: #ffff00;
+        background-color: var(--accent);
         font-weight: bold;
+        align-self: flex-start;
     }
 
     .create-btn:hover {
-        background-color: #ffffcc;
+        background-color: var(--accent-strong);
     }
 
     .topics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-        margin-top: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 18px;
+        margin-top: 6px;
         width: 100%;
         flex: 1;
     }
@@ -188,14 +199,14 @@ onBeforeUnmount(() => {
     }
 
     .topics-loading {
-        color: #ffff00;
+        color: var(--accent);
         text-align: center;
-        margin: 20px 0;
+        margin: 16px 0;
     }
 
     @media (max-width: 1200px) {
         .topics-grid {
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         }
     }
 

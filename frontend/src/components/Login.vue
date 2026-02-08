@@ -34,45 +34,60 @@ const submit = async () => {
 </script>
 
 <template>
-    <form @submit.prevent="submit">
-        <h2>Logowanie</h2>
-        <div v-if="error">{{ error }}</div>
-        <input v-model="loginOrEmail" type="text" placeholder="Login albo email" required />
-        <input v-model="password" type="password" placeholder="Hasło" required />
-        <button :disabled="loading" class="login-btn">Zaloguj</button>
-    </form>
+    <div class="auth-container">
+        <form @submit.prevent="submit" class="auth-form">
+            <h2>Logowanie</h2>
+            <div v-if="error" class="auth-alert">{{ error }}</div>
+            <input v-model="loginOrEmail" type="text" placeholder="Login albo email" required />
+            <input v-model="password" type="password" placeholder="Hasło" required />
+            <button :disabled="loading" class="login-btn">Zaloguj</button>
+        </form>
+    </div>
 </template>
 
-<style>
-    div {
-        color: inherit;
-    }
-
-    form {
+<style scoped>
+    .auth-container {
+        min-height: 70vh;
         display: flex;
-        flex-direction: column;
-        margin: auto;
-        max-width: 50vw;
         align-items: center;
         justify-content: center;
+        padding: 24px;
     }
 
-    form div {
-        margin-top: 10px;
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: min(420px, 100%);
+        padding: 22px;
+        background: var(--panel);
+        border: 2px solid var(--border);
     }
-    
-    form input {
-        margin-top: 10px;
-        width: 60%;
-        height: 30px;
-        border: none;
-        border-radius: 20px;
-        padding: 1em;
+
+    .auth-form h2 {
+        margin: 0 0 6px 0;
+        color: var(--accent);
+        text-align: center;
+    }
+
+    .auth-form input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid var(--border);
+        background: #0d0d0d;
+        color: var(--text);
+        font-family: inherit;
+    }
+
+    .auth-alert {
+        padding: 10px 12px;
+        background: rgba(244, 107, 107, 0.2);
+        border-left: 4px solid var(--danger);
     }
 
     .login-btn {
-        margin-top:15px;
-        background-color: yellow;
+        margin-top: 6px;
+        background-color: var(--accent);
+        border: 2px solid var(--border);
     }
-
 </style>

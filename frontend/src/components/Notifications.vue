@@ -53,28 +53,28 @@ watch(
   padding: 12px 16px;
   border-radius: 6px;
   border-left: 4px solid;
-  background-color: rgb(238, 255, 0);
-  border-left-color: rgb(238, 255, 0);
+  background-color: var(--accent);
+  border-left-color: var(--accent);
   color: rgb(0, 0, 0);
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .notification.success {
-  background-color: rgb(74, 222, 128);
-  border-left-color: #4ade80;
+  background-color: var(--success);
+  border-left-color: var(--success);
   color: #000000;
 }
 
 .notification.error {
-  background-color: rgb(239, 68, 68);
-  border-left-color: #ef4444;
+  background-color: var(--danger);
+  border-left-color: var(--danger);
   color: #000000;
 }
 
 .notification.warning {
-  background-color: rgb(249, 116, 22);
-  border-left-color: #f97316;
+  background-color: var(--warning);
+  border-left-color: var(--warning);
   color: #000000;
 }
 

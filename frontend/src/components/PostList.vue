@@ -29,6 +29,7 @@ const postStore = usePostStore();
 const socketStore = useSocketStore();
 
 const listRef = ref(null);
+const formRef = ref(null);
 const posts = computed(() => postStore.getPosts(props.topicId));
 const pagination = computed(() => postStore.getPagination(props.topicId));
 
@@ -312,8 +313,19 @@ const handleReplyFromMain = (replyData) => {
     };
 }
 
+const scrollToForm = async () => {
+    await nextTick();
+    if (formRef.value) {
+        formRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (newPostTextarea.value) {
+            newPostTextarea.value.focus();
+        }
+    }
+};
+
 defineExpose({
-    handleReplyFromMain
+    handleReplyFromMain,
+    scrollToForm
 });
 
 </script>
@@ -331,8 +343,13 @@ defineExpose({
             />
         </div>
 
-        <!-- Formularz dodawania posta -->
-        <form v-if="showForm" @submit.prevent="addPost" class="add-post-form">
+        <form
+            v-if="showForm"
+            ref="formRef"
+            @submit.prevent="addPost"
+            class="add-post-form"
+            :class="{ 'reply-wide': !isSidebar }"
+        >
             <h3 class="form-title">Napisz odpowiedź</h3>
             
             <div v-if="replyingToPost" class="reply-info">
@@ -370,12 +387,18 @@ defineExpose({
             
             <div class="form-group">
                 <label class="form-label">Tagi:</label>
-                <select v-model="selectedTagIds" multiple class="form-select">
+                <!-- <select v-model="selectedTagIds" multiple class="form-select">
                     <option v-for="tag in availableTags" :key="tag._id" :value="tag._id">
                         {{ tag.name }}
                     </option>
                 </select>
-                <small class="form-help">Przytrzymaj Ctrl/Cmd aby wybrać wiele tagów</small>
+                <small class="form-help">Przytrzymaj Ctrl/Cmd aby wybrać wiele tagów</small> -->
+                <div class="tag-checkboxes">
+                    <label v-for="tag in availableTags" :key="tag._id" class="tag-checkbox">
+                        <input type="checkbox" :value="tag._id" v-model="selectedTagIds" />
+                        <span>#{{ tag.name }}</span>
+                    </label>
+                </div>
             </div>
 
             <div v-if="selectedTagIds.length" class="selected-tags">
@@ -416,12 +439,20 @@ defineExpose({
                 </button>
             </div>
         </div>
+        <button
+            v-if="showForm && showPosts && !isSidebar"
+            type="button"
+            class="reply-fab"
+            @click="scrollToForm"
+        >
+            Napisz odpowiedź
+        </button>
     </div>
 </template>
 
 <style scoped>
 .post-list-container {
-    max-width: 1000px;
+    max-width: 980px;
     margin: 0 auto;
     color: #eee;
 }
@@ -432,9 +463,9 @@ defineExpose({
 }
 
 .post-list-container.sidebar-mode .add-post-form {
-    padding: 15px;
+    padding: 18px;
     border-radius: 4px;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
 .post-list-container.sidebar-mode .form-title {
@@ -444,7 +475,7 @@ defineExpose({
 }
 
 .post-list-container.sidebar-mode .form-textarea {
-    min-height: 60px;
+    min-height: 120px;
 }
 
 .post-list-container.sidebar-mode .form-group {
@@ -472,23 +503,30 @@ defineExpose({
 }
 
 .posts-section {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
 }
 
 .add-post-form {
-    background-color: #2d2d2d;
-    border: 2px solid #ffff00;
-    padding: 25px;
+    background-color: var(--panel);
+    border: 2px solid var(--border);
+    padding: 20px;
     border-radius: 4px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+}
+
+.add-post-form.reply-wide {
+    width: 100%;
+    max-width: 1240px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .form-title {
-    color: #ffff00;
+    color: var(--accent);
     margin-top: 0;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #ffff00;
-    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
 }
 
 .form-group {
@@ -497,7 +535,7 @@ defineExpose({
 
 .form-label {
     display: block;
-    color: #ffff00;
+    color: var(--accent);
     font-weight: bold;
     margin-bottom: 8px;
 }
@@ -513,9 +551,9 @@ defineExpose({
 .form-select {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ffff00;
+    border: 1px solid var(--border);
     border-radius: 4px;
-    background-color: #1a1a1a;
+    background-color: #111111;
     color: #fff;
     font-family: "Pixelify Sans", monospace;
     font-size: 0.95em;
@@ -524,9 +562,9 @@ defineExpose({
 
 .form-select-small {
     padding: 6px 10px;
-    border: 1px solid #ffff00;
+    border: 1px solid var(--border);
     border-radius: 4px;
-    background-color: #1a1a1a;
+    background-color: #111111;
     color: #fff;
     font-family: "Pixelify Sans", sans-serif;
 }
@@ -550,14 +588,14 @@ defineExpose({
 
 .form-textarea {
     resize: vertical;
-    min-height: 100px;
+    min-height: 140px;
 }
 
 .form-textarea:focus,
 .form-select:focus,
 .form-select-small:focus {
     outline: none;
-    border-color: #ffff00;
+    border-color: var(--accent-strong);
 }
 
 .form-textarea:disabled {
@@ -566,7 +604,7 @@ defineExpose({
 }
 
 .reply-info {
-    background-color: rgba(255, 255, 0, 0.384);
+    background-color: rgba(229, 242, 103, 0.18);
     padding: 15px;
     border-radius: 4px;
     margin-bottom: 20px;
@@ -577,12 +615,12 @@ defineExpose({
     justify-content: space-between;
     align-items: center;
     gap: 15px;
-    padding: auto;
-    margin:0;
+    padding: 0;
+    margin: 0;
 }
 
 .reply-author {
-    color: #ffff00;
+    color: var(--accent);
     font-weight: bold;
 }
 
@@ -594,29 +632,51 @@ defineExpose({
 
 .btn-cancel-reply {
     background-color: #000000;
-    color: yellow;
+    color: var(--accent);
     font-weight: bolder;
-    border: 3px solid yellow;
-    border-radius: none;
+    border: 2px solid var(--border);
+    border-radius: 4px;
     padding: 8px 12px;
     cursor: pointer;
 }
 
 .btn-cancel-reply:hover {
-    background-color: yellow;
-    color: black;
+    background-color: var(--accent);
+    color: #000;
+}
+
+.tag-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    background: #0d0d0d;
+}
+
+.tag-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 0.9em;
+}
+
+.tag-checkbox input {
+    accent-color: var(--accent);
 }
 
 /* Tagi */
 .selected-tags {
-    background-color: yellow;
+    background-color: rgba(229, 242, 103, 0.12);
     padding: 12px;
     border-radius: 4px;
     margin-bottom: 20px;
 }
 
 .selected-tags-title {
-    color: #000000;
+    color: var(--accent);
     font-weight: bold;
     margin-bottom: 8px;
 }
@@ -624,22 +684,27 @@ defineExpose({
 .tags-chips {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
 }
 
 .tag-chip {
-    background-color: #000000;
-    color: #ffff00;
+    background-color: #0b0b0b;
+    color: var(--accent);
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 0.9em;
-    border: 1px solid #ffff00;
+    border: 1px solid var(--border);
+    white-space: nowrap;
 }
 
 
 /* Przyciski */
 .form-actions {
-    margin-top: 20px;
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .form-actions.sidebar-actions {
@@ -661,12 +726,12 @@ defineExpose({
 }
 
 .btn-primary {
-    background-color: #ffff00;
+    background-color: var(--accent);
     color: #000;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: #e6e600;
+    background-color: var(--accent-strong);
 }
 
 .btn-primary:disabled {
@@ -675,36 +740,37 @@ defineExpose({
 }
 
 .btn-large {
-    width: 100%;
-    padding: 12px;
-    font-size: 1em;
+    width: auto;
+    min-width: 170px;
+    padding: 10px 16px;
+    font-size: 0.95em;
 }
 
 .btn-success {
-    background-color: #ffff00;
+    background-color: var(--success);
     color: #000;
 }
 
 .btn-success:hover {
-    background-color: #e6e600;
+    background-color: var(--success);
 }
 
 .btn-secondary {
-    background-color: #666;
-    color: #fff;
+    background-color: #2b2b2b;
+    color: var(--text);
 }
 
 .btn-secondary:hover {
-    background-color: #555;
+    background-color: #3b3b3b;
 }
 
 .btn-info {
-    background-color: #ffff00;
+    background-color: var(--accent);
     color: #000;
 }
 
 .btn-info:hover {
-    background-color: #e6e600;
+    background-color: var(--accent-strong);
 }
 
 .error-message {
@@ -717,10 +783,10 @@ defineExpose({
 }
 
 .pagination-section {
-    margin-top: 40px;
+    margin-top: 28px;
     padding: 20px;
-    background-color: #2d2d2d;
-    border: 1px solid #ffff00;
+    background-color: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 4px;
 }
 
@@ -740,7 +806,7 @@ defineExpose({
 }
 
 .page-counter strong {
-    color: #ffff00;
+    color: var(--accent);
 }
 
 .pagination-controls {
@@ -751,7 +817,7 @@ defineExpose({
 
 .btn-pagination {
     padding: 10px 16px;
-    background-color: #ffff00;
+    background-color: var(--accent);
     color: #000;
     border: none;
     border-radius: 4px;
@@ -760,7 +826,7 @@ defineExpose({
 }
 
 .btn-pagination:hover:not(:disabled) {
-    background-color: #e6e600;
+    background-color: var(--accent-strong);
 }
 
 .btn-pagination:disabled {
@@ -769,7 +835,24 @@ defineExpose({
 }
 
 .highlight-jump {
-    outline: 2px solid #ffff00;
+    outline: 2px solid var(--accent);
     transition: outline 0.3s;
+}
+
+.reply-fab {
+    position: fixed;
+    /* right: 24px; */
+    bottom: 24px;
+    z-index: 30;
+    border: 2px solid var(--border);
+    background: var(--accent);
+    color: #000;
+    padding: 10px 14px;
+    font-weight: 700;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.reply-fab:hover {
+    background: var(--accent-strong);
 }
 </style>

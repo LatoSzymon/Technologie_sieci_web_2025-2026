@@ -441,7 +441,7 @@ const deleteUserAction = async (userId) => {
 	font-size: 2.5em;
 	margin-bottom: 30px;
 	text-align: center;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -449,31 +449,33 @@ const deleteUserAction = async (userId) => {
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 20px;
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-activity {
-	background: rgba(238, 255, 0, 0.06);
-	border: 2px solid rgba(238, 255, 0, 0.3);
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-tags {
-	background: rgba(59, 130, 246, 0.08);
-	border: 2px solid rgba(59, 130, 246, 0.3);
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-pending {
-	background: rgba(249, 115, 22, 0.08);
-	border: 2px solid rgba(249, 115, 22, 0.3);
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-blocked {
-	background: rgba(239, 68, 68, 0.08);
-	border: 2px solid rgba(239, 68, 68, 0.3);
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-users {
-	background: rgba(74, 222, 128, 0.08);
-	border: 2px solid rgba(74, 222, 128, 0.3);
+	background: var(--panel);
+	border: 2px solid var(--border);
 }
 
 .section-header {
@@ -486,7 +488,7 @@ const deleteUserAction = async (userId) => {
 }
 
 .section-title {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	margin: 0;
 	font-size: 1.3em;
 }
@@ -499,21 +501,21 @@ const deleteUserAction = async (userId) => {
 }
 
 .section-meta {
-	color: rgba(238, 255, 0, 0.7);
+	color: var(--text-soft);
 	font-size: 0.9em;
 }
 
 .empty-state {
 	text-align: center;
 	padding: 30px 20px;
-	color: rgba(238, 255, 0, 0.7);
+	color: var(--text-soft);
 	font-style: italic;
 }
 
 .loading-message {
 	text-align: center;
 	padding: 20px;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	font-weight: 500;
 }
 
@@ -525,17 +527,17 @@ const deleteUserAction = async (userId) => {
 }
 
 .alert-error {
-	background-color: rgba(239, 68, 68, 0.2);
-	border: 2px solid #ef4444;
-	color: #fca5a5;
+	background-color: rgba(244, 107, 107, 0.2);
+	border: 2px solid var(--danger);
+	color: var(--text);
 }
 
 .form-input {
-	background-color: rgba(0, 0, 0, 0.3);
-	border: 2px solid rgb(238, 255, 0);
+	background-color: rgba(0, 0, 0, 0.35);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	padding: 10px 15px;
-	color: rgb(238, 255, 0);
+	color: var(--text);
 	font-size: 1em;
 	font-family: inherit;
 	transition: all 0.3s ease;
@@ -543,12 +545,12 @@ const deleteUserAction = async (userId) => {
 
 .form-input:focus {
 	outline: none;
-	border-color: rgb(247, 255, 138);
+	border-color: var(--accent-strong);
 	background-color: rgba(0, 0, 0, 0.5);
 }
 
 .form-input::placeholder {
-	color: rgba(238, 255, 0, 0.5);
+	color: rgba(229, 242, 103, 0.5);
 }
 
 .form-input-sm {
@@ -559,7 +561,7 @@ const deleteUserAction = async (userId) => {
 
 .btn {
 	padding: 8px 12px;
-	border: 2px solid rgb(238, 255, 0);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	font-size: 0.85em;
 	font-family: inherit;
@@ -569,36 +571,36 @@ const deleteUserAction = async (userId) => {
 }
 
 .btn-primary {
-	background-color: rgb(238, 255, 0);
+	background-color: var(--accent);
 	color: #000000;
-	border-color: rgb(238, 255, 0);
+	border-color: var(--border);
 }
 
 .btn-primary:hover {
-	background-color: rgb(247, 255, 138);
-	border-color: rgb(247, 255, 138);
+	background-color: var(--accent-strong);
+	border-color: var(--accent-strong);
 }
 
 .btn-success {
-	background-color: rgba(74, 222, 128, 0.9);
+	background-color: var(--success);
 	color: #000000;
-	border-color: #4ade80;
+	border-color: var(--success);
 }
 
 .btn-success:hover {
-	background-color: #4ade80;
-	border-color: rgb(247, 255, 138);
+	background-color: var(--success);
+	border-color: var(--success);
 }
 
 .btn-danger {
-	background-color: rgba(239, 68, 68, 0.9);
-	color: #ffffff;
-	border-color: #ef4444;
+	background-color: var(--danger);
+	color: #000000;
+	border-color: var(--danger);
 }
 
 .btn-danger:hover {
-	background-color: #ef4444;
-	border-color: rgb(247, 255, 138);
+	background-color: var(--danger);
+	border-color: var(--danger);
 }
 
 .notifications-list {
@@ -611,8 +613,8 @@ const deleteUserAction = async (userId) => {
 }
 
 .notification-item {
-	background-color: rgba(238, 255, 0, 0.05);
-	border-left: 4px solid rgb(238, 255, 0);
+	background-color: rgba(229, 242, 103, 0.08);
+	border-left: 4px solid var(--accent);
 	padding: 12px;
 	border-radius: 4px;
 	display: flex;
@@ -622,13 +624,13 @@ const deleteUserAction = async (userId) => {
 }
 
 .notification-time {
-	color: rgba(238, 255, 0, 0.6);
+	color: var(--text-soft);
 	font-size: 0.85em;
 	min-width: 140px;
 }
 
 .notification-message {
-	color: rgb(238, 255, 0);
+	color: var(--text);
 	flex: 1;
 }
 
@@ -643,40 +645,40 @@ const deleteUserAction = async (userId) => {
 }
 
 .badge-success {
-	background-color: #4ade80;
+	background-color: var(--success);
 	color: #000000;
 }
 
 .badge-error {
-	background-color: #ef4444;
-	color: #ffffff;
+	background-color: var(--danger);
+	color: #000000;
 }
 
 .badge-warning {
-	background-color: #f97316;
-	color: #ffffff;
+	background-color: var(--warning);
+	color: #000000;
 }
 
 .badge-info {
-	background-color: #3b82f6;
-	color: #ffffff;
+	background-color: var(--accent-soft);
+	color: #000000;
 }
 
 .badge-other {
-	background-color: rgb(238, 255, 0);
+	background-color: var(--accent);
 	color: #000000;
 }
 
 .badge-blocked {
-	background-color: rgba(239, 68, 68, 0.3);
-	color: #fca5a5;
-	border: 1px solid #ef4444;
+	background-color: rgba(244, 107, 107, 0.2);
+	color: var(--text);
+	border: 1px solid var(--danger);
 }
 
 .badge-pending {
-	background-color: rgba(249, 115, 22, 0.3);
-	color: #fed7aa;
-	border: 1px solid #f97316;
+	background-color: rgba(242, 162, 58, 0.2);
+	color: var(--text);
+	border: 1px solid var(--warning);
 }
 
 .tag-management {
@@ -704,7 +706,7 @@ const deleteUserAction = async (userId) => {
 }
 
 .list-header h4 {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	margin: 0 0 10px 0;
 	font-size: 1.1em;
 }
@@ -719,11 +721,11 @@ const deleteUserAction = async (userId) => {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	background-color: rgba(238, 255, 0, 0.1);
-	border: 1px solid rgb(238, 255, 0);
+	background-color: rgba(229, 242, 103, 0.12);
+	border: 1px solid var(--border);
 	padding: 8px 12px;
 	border-radius: 20px;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 }
 
 .tag-name {
@@ -738,7 +740,7 @@ const deleteUserAction = async (userId) => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background-color: #ef4444;
+	background-color: var(--danger);
 	border: none;
 	border-radius: 50%;
 	font-size: 1em;
@@ -749,7 +751,7 @@ const deleteUserAction = async (userId) => {
 }
 
 .tag-delete-btn:hover {
-	background-color: #dc2626;
+	background-color: var(--danger);
 	transform: scale(1.15);
 }
 
@@ -761,13 +763,13 @@ const deleteUserAction = async (userId) => {
 }
 
 .users-count {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	font-weight: 500;
 	margin-bottom: 10px;
 }
 
 .users-count strong {
-	color: rgb(247, 255, 138);
+	color: var(--accent-strong);
 	font-size: 1.2em;
 }
 
@@ -778,7 +780,7 @@ const deleteUserAction = async (userId) => {
 }
 
 .user-card {
-	border: 4px solid rgb(238, 255, 0);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	padding: 15px;
 	display: flex;
@@ -787,7 +789,7 @@ const deleteUserAction = async (userId) => {
 }
 
 .user-card:hover {
-	background-color: rgba(238, 255, 0, 0.08);
+	background-color: rgba(229, 242, 103, 0.08);
 }
 
 .user-card-header {
@@ -797,12 +799,12 @@ const deleteUserAction = async (userId) => {
 }
 
 .user-login {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	font-size: 1.1em;
 }
 
 .user-email {
-	color: rgba(238, 255, 0, 0.6);
+	color: var(--text-soft);
 	font-size: 0.9em;
 }
 
@@ -819,8 +821,8 @@ const deleteUserAction = async (userId) => {
 }
 
 .user-card-actions .btn {
-	flex: 1;
-	min-width: 80px;
+	flex: 0 0 auto;
+	min-width: 110px;
 }
 
 .list-scroll {

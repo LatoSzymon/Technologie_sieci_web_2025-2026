@@ -172,7 +172,7 @@ const cancelPasswordChange = () => {
 	font-size: 2.5em;
 	margin-bottom: 30px;
 	text-align: center;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -180,20 +180,20 @@ const cancelPasswordChange = () => {
 	text-align: center;
 	padding: 40px 20px;
 	font-size: 1.2em;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 }
 
 /* Info Section */
 .info-section {
-	background-color: rgba(238, 255, 0, 0.05);
-	border: 2px solid rgb(238, 255, 0);
+	background-color: rgba(229, 242, 103, 0.06);
+	border: 2px solid var(--border);
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 30px;
 }
 
 .info-section h3 {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	margin-top: 0;
 	margin-bottom: 20px;
 	font-size: 1.3em;
@@ -215,18 +215,18 @@ const cancelPasswordChange = () => {
 
 .info-label {
 	font-weight: bold;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	font-size: 0.9em;
 }
 
 .info-value {
-	color: rgb(247, 255, 138);
+	color: var(--text);
 	font-size: 1.1em;
 	word-break: break-all;
 }
 
 .info-role {
-	background-color: rgba(238, 255, 0, 0.1);
+	background-color: rgba(229, 242, 103, 0.12);
 	padding: 5px 10px;
 	border-radius: 4px;
 	display: inline-block;
@@ -240,8 +240,8 @@ const cancelPasswordChange = () => {
 /* Edit and Password Sections */
 .edit-section,
 .password-section {
-	background-color: rgba(238, 255, 0, 0.05);
-	border: 2px solid rgb(238, 255, 0);
+	background-color: rgba(229, 242, 103, 0.06);
+	border: 2px solid var(--border);
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 20px;
@@ -249,7 +249,7 @@ const cancelPasswordChange = () => {
 
 .edit-section h3,
 .password-section h3 {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	margin-top: 0;
 	margin-bottom: 15px;
 	font-size: 1.2em;
@@ -269,16 +269,16 @@ const cancelPasswordChange = () => {
 }
 
 .form-label {
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 	font-weight: 500;
 }
 
 .form-input {
-	background-color: rgba(0, 0, 0, 0.3);
-	border: 2px solid rgb(238, 255, 0);
+	background-color: rgba(0, 0, 0, 0.35);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	padding: 10px 15px;
-	color: rgb(238, 255, 0);
+	color: var(--text);
 	font-size: 1em;
 	font-family: inherit;
 	transition: all 0.3s ease;
@@ -286,18 +286,18 @@ const cancelPasswordChange = () => {
 
 .form-input:focus {
 	outline: none;
-	border-color: rgb(247, 255, 138);
+	border-color: var(--accent-strong);
 	background-color: rgba(0, 0, 0, 0.5);
 }
 
 .form-input::placeholder {
-	color: rgba(238, 255, 0, 0.5);
+	color: rgba(229, 242, 103, 0.5);
 }
 
 /* Buttons */
 .btn {
 	padding: 10px 20px;
-	border: 2px solid rgb(238, 255, 0);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	font-size: 1em;
 	font-family: inherit;
@@ -309,24 +309,24 @@ const cancelPasswordChange = () => {
 }
 
 .btn-primary {
-	background-color: rgb(238, 255, 0);
+	background-color: var(--accent);
 	color: #000000;
 }
 
 .btn-primary:hover {
-	background-color: rgb(247, 255, 138);
-	border-color: rgb(247, 255, 138);
+	background-color: var(--accent-strong);
+	border-color: var(--accent-strong);
 	transform: scale(1.05);
 }
 
 .btn-secondary {
 	background-color: transparent;
-	color: rgb(238, 255, 0);
+	color: var(--accent);
 }
 
 .btn-secondary:hover {
-	background-color: rgba(238, 255, 0, 0.1);
-	border-color: rgb(247, 255, 138);
+	background-color: rgba(229, 242, 103, 0.12);
+	border-color: var(--accent-strong);
 }
 
 .button-group {
@@ -336,7 +336,8 @@ const cancelPasswordChange = () => {
 }
 
 .button-group .btn {
-	flex: 1;
+	flex: 0 0 auto;
+	min-width: 140px;
 }
 
 /* Alerts */

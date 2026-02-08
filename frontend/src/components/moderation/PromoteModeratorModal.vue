@@ -188,7 +188,7 @@ watch(() => props.open, (newOpen) => {
     border: 2px solid rgb(238, 255, 0);
     padding: 25px;
     border-radius: 8px;
-    min-width: 420px;
+    width: min(520px, 92vw);
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);

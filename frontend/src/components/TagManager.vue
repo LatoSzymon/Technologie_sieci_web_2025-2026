@@ -68,11 +68,50 @@ export default {
 
 <style scoped>
 .tag-manager {
-  max-width: 400px;
+  max-width: 520px;
   margin: 0 auto;
+  padding: 20px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+}
+.tag-manager h2 {
+  margin-top: 0;
+  color: var(--accent);
+}
+.tag-manager form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.tag-manager input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  background: #0d0d0d;
+  color: var(--text);
+}
+.tag-manager button {
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  background: var(--accent);
+}
+.tag-manager ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-manager li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 .error {
-  color: red;
+  color: var(--danger);
   margin-top: 10px;
 }
 </style>

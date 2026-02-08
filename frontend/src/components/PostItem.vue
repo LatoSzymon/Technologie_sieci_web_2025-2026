@@ -350,27 +350,64 @@ const toggleLike = async () => {
 
 
 .post {
-  border: 1px solid #44ff00;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  border: 2px solid var(--border);
+  padding: 14px;
+  margin-bottom: 14px;
+  background: var(--panel-2);
 }
 
 .author {
   font-weight: bold;
-  margin-bottom: 0.5rem;
+  margin-bottom: 6px;
+  color: var(--accent);
 }
 
 .content {
-  margin-bottom: 0.5rem;
+  margin-bottom: 10px;
 }
 
 .actions button {
-  margin-left: 4px;
-  margin-top: 4px;
-  border-radius: 0;
-  background-color: black;
-  border: 3px solid yellow;
-  color: yellow;
+  margin: 0;
+  border-radius: 4px;
+  background-color: #0b0b0b;
+  border: 2px solid var(--border);
+  color: var(--accent);
+  padding: 6px 10px;
+  font-size: 0.85em;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reply-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(229, 242, 103, 0.12);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.reply-text {
+  color: var(--text);
+}
+
+.btn-jump {
+  border: 2px solid var(--border);
+  background: var(--accent);
+  color: #000;
+  padding: 6px 10px;
+  font-size: 0.85em;
+}
+
+.btn-jump:hover {
+  background: var(--accent-strong);
 }
 
 .edit-section {
@@ -384,9 +421,9 @@ const toggleLike = async () => {
 
 .edit-title {
   margin: 0 0 20px 0;
-  color: rgb(238, 255, 0);
+  color: var(--accent);
   font-size: 1.2em;
-  border-bottom: 2px solid rgb(238, 255, 0);
+  border-bottom: 2px solid var(--border);
   padding-bottom: 10px;
 }
 
@@ -454,13 +491,13 @@ const toggleLike = async () => {
   padding: 6px 10px;
   font-size: 0.9em;
   background-color: #000;
-  color: #ffff00;
-  border: 2px solid #ffff00;
+  color: var(--accent);
+  border: 2px solid var(--border);
   cursor: pointer;
 }
 
 .btn-edit-code:hover {
-  background-color: #ffff00;
+  background-color: var(--accent);
   color: #000;
 }
 
@@ -517,22 +554,32 @@ const toggleLike = async () => {
 
 .date {
   font-size: 0.85rem;
-  color: #666;
+  color: #8e944f;
 }
 
 .meta {
   font-size: 0.75rem;
-  color: #999;
-  margin-top: 0.5rem;
+  color: #9aa07a;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.post-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .tag-badge {
-  color: yellow;
-  background-color: rgb(0, 255, 0);
-  padding: 2px;
-  padding-left: 5px;
-  padding-right:5px;
-  border-radius: 5px;
-  margin-left: 3px;
+  color: var(--accent);
+  background-color: #12331a;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  white-space: nowrap;
 }
 </style>

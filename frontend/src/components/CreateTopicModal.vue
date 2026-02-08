@@ -139,9 +139,9 @@ onBeforeUnmount(() => {
 }
 .modal {
   background: #302c2ceb;
-  padding: 2em;
+  padding: 20px;
   border-radius: 8px;
-  min-width: 400px;
+  width: min(720px, 92vw);
   max-height: 90vh;
   overflow-y: auto;
 }
@@ -150,9 +150,9 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 1fr;
   gap: 1em;
   margin-top: 0.5em;
-  border: 2px solid #ffff00;
+  border: 2px solid var(--border);
   padding: 1em;
-  min-width: 550px;
+  width: 100%;
 }
 .available-tags, .selected-tags {
   display: flex;
@@ -161,11 +161,11 @@ onBeforeUnmount(() => {
 .available-tags h4, .selected-tags h4 {
   margin: 0 0 0.5em 0;
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-soft);
 }
 
 .newName {
-  width: 400px;
+  width: 100%;
 }
 
 .tag-list {
@@ -191,15 +191,19 @@ onBeforeUnmount(() => {
 }
 .tag-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5em;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 .tag-chip {
-  background: #00ff22;
-  color: white;
+  background: #12331a;
+  color: var(--accent);
   padding: 0.25em 0.75em;
   border-radius: 20px;
   font-size: 0.9em;
+  border: 1px solid var(--border-soft);
+  white-space: nowrap;
 }
 .no-tags, .no-selection, .loading {
   color: #999;
@@ -217,8 +221,14 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  background: #ffff00;
+  background: var(--accent);
   color: rgb(0, 0, 0);
+}
+
+@media (max-width: 720px) {
+  .tags-selector {
+    grid-template-columns: 1fr;
+  }
 }
 
 .error {

@@ -251,22 +251,22 @@ onBeforeUnmount(() => {
 .topic-node {
   display: flex;
   flex-direction: column;
-  margin-bottom: 1vh;
+  margin-bottom: 10px;
 }
 
 .topic-title {
   cursor: pointer;
-  border: 3px solid #ffff00;
-  padding: 18px;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 0, 0.05);
+  border: 2px solid var(--border);
+  padding: 14px;
+  border-radius: 6px;
+  background-color: rgba(229, 242, 103, 0.05);
   transition: all 0.2s ease;
-  min-height: 90px;
+  min-height: 64px;
 }
 
 .topic-title:hover {
-  background-color: rgba(255, 255, 0, 0.15);
-  box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+  background-color: rgba(229, 242, 103, 0.12);
+  box-shadow: 0 0 8px rgba(229, 242, 103, 0.25);
 }
 
 .topic-header {
@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
 .topic-name {
   cursor: pointer;
   display: block;
-  font-size: 1.1em;
+  font-size: 1.05em;
   font-weight: 700;
   max-width: 100%;
   overflow: hidden;
@@ -318,27 +318,32 @@ span {
 
 .tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
 }
 
 .tag {
-  background: #037e2a;
-  color: #ffff00;
+  background: #0d3015;
+  color: var(--accent);
   border-radius: 4px;
-  padding: 0.2em 0.55em;
+  padding: 0.2em 0.6em;
   font-size: 0.85em;
+  white-space: nowrap;
+  border: 1px solid var(--border-soft);
 }
 
 .topic-actions {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .btn-action {
-  padding: 5px 10px;
+  padding: 6px 10px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -346,8 +351,8 @@ span {
   font-weight: bold;
   white-space: nowrap;
   transition: all 0.2s ease;
-  flex: 1;
-  min-width: 60px;
+  flex: 0 0 auto;
+  min-width: 88px;
 }
 
 .btn-close, .btn-open {
@@ -388,24 +393,24 @@ span {
   flex-direction: column;
   gap: 8px;
   margin-top: 12px;
-  flex-wrap: wrap;
 }
 
 .topic-options-primary {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .btn-option {
   padding: 6px 12px;
-  border: 2px solid #ffff00;
-  border-radius: 5px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
   cursor: pointer;
   font-size: 0.85em;
   font-weight: bold;
-  background: #ffff00;
+  background: var(--accent);
   color: #111;
+  flex: 0 0 auto;
 }
 
 .btn-open-topic {
