@@ -78,6 +78,28 @@ const createPost = async (req, res) => {
                 });
 
                 io.to(`topic:${topicId}`).emit("post:new", post);
+
+                if (replyTo) {
+                    try {
+                        const replyPost = await Post.findById(replyTo).populate('authorId', 'login');
+                        const replyAuthorId = replyPost?.authorId?._id || replyPost?.authorId;
+                        const replyAuthorStr = replyAuthorId?.toString ? replyAuthorId.toString() : String(replyAuthorId || '');
+                        const authorStr = authorId?.toString ? authorId.toString() : String(authorId || '');
+
+                        if (replyAuthorStr && replyAuthorStr !== authorStr) {
+                            io.to(`user:${replyAuthorStr}`).emit('user:reply', {
+                                topicId,
+                                postId: post._id,
+                                replyToPostId: replyTo,
+                                authorId,
+                                authorLogin: post.authorId?.login,
+                                snippet: (post.content || '').slice(0, 140)
+                            });
+                        }
+                    } catch (notifyErr) {
+                        console.error('WebSocket error (reply notify):', notifyErr);
+                    }
+                }
                 console.log(`Event emitted successfully`);
             } else {
                 console.error('io is not available on app');
@@ -129,6 +151,17 @@ const toggleLike = async (req, res) => {
                     likes: normalizedLikes,
                     liked: !liked 
                 });
+
+                if (!liked) {
+                    const authorId = post.authorId?.toString ? post.authorId.toString() : String(post.authorId || '');
+                    if (authorId && authorId !== userIdStr) {
+                        io.to(`user:${authorId}`).emit('user:postLiked', {
+                            topicId: post.topicId,
+                            postId: post._id,
+                            likedBy: userIdStr
+                        });
+                    }
+                }
                 console.log(`Emitted post:liked for post ${post._id}`);
             }
         } catch (e) {

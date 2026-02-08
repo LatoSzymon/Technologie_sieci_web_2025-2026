@@ -180,6 +180,22 @@ export const useSocketStore = defineStore('socket', () => {
             }
         });
 
+        socket.value.on('user:reply', (data) => {
+            pushNotification({
+                type: 'info',
+                message: data?.authorLogin
+                    ? `Otrzymales odpowiedz od ${data.authorLogin}`
+                    : 'Otrzymales odpowiedz na post'
+            });
+        });
+
+        socket.value.on('user:postLiked', (data) => {
+            pushNotification({
+                type: 'info',
+                message: 'Twoj post dostal like'
+            });
+        });
+
         socket.value.on('post:liked', (data) => {
             console.log('[WebSocket] post:liked received', data);
             const postStore = usePostStore();
@@ -194,6 +210,27 @@ export const useSocketStore = defineStore('socket', () => {
                 type: data?.type || 'info',
                 message: data?.message || 'Nowe powiadomienie admina'
             });
+        });
+
+        socket.value.on('tag:created', () => {
+            const auth = authStore();
+            if (auth.user?.role === 'admin') {
+                pushNotification({ type: 'success', message: 'Dodano tag' });
+            }
+        });
+
+        socket.value.on('tag:updated', () => {
+            const auth = authStore();
+            if (auth.user?.role === 'admin') {
+                pushNotification({ type: 'info', message: 'Zaktualizowano tag' });
+            }
+        });
+
+        socket.value.on('tag:deleted', () => {
+            const auth = authStore();
+            if (auth.user?.role === 'admin') {
+                pushNotification({ type: 'warning', message: 'Usunieto tag' });
+            }
         });
 
         socket.value.on('moderator:promoted', (data) => {
@@ -218,12 +255,14 @@ export const useSocketStore = defineStore('socket', () => {
             if (data?.topicId) {
                 refreshTopicData(data.topicId);
             }
+            pushNotification({ type: 'info', message: 'Dodano moderatora' });
         });
 
         socket.value.on('topic:moderatorRemoved', (data) => {
             if (data?.topicId) {
                 refreshTopicData(data.topicId);
             }
+            pushNotification({ type: 'warning', message: 'Usunieto moderatora' });
         });
 
         socket.value.on('topic:userBlocked', (data) => {
@@ -278,6 +317,14 @@ export const useSocketStore = defineStore('socket', () => {
                 auth.logout();
                 router.push('/login');
             }
+        });
+
+        socket.value.on('user:profileUpdated', () => {
+            pushNotification({ type: 'success', message: 'Profil zostal zaktualizowany' });
+        });
+
+        socket.value.on('user:securityUpdated', () => {
+            pushNotification({ type: 'info', message: 'Zmieniono ustawienia bezpieczenstwa' });
         });
     };
 
