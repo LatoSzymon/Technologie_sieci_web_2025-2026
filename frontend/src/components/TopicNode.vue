@@ -172,49 +172,56 @@ onBeforeUnmount(() => {
   <div class="topic-node">
     <div class="topic-title" @click="toggleOptions">
       <div class="topic-header">
-        <span class="topic-name">
-          {{ node.name }}
-          <span v-if="node.isClosed" class="closed">(zamkniety)</span>
-          <span v-if="node.isHidden" class="hidden">(ukryty)</span>
-          <span v-if="node.tags && node.tags.length" class="tags">
-            <span v-for="tag in node.tags" :key="tag._id || tag" class="tag">
-              #{{ getTagName(tag) }}
-            </span>
+        <div class="topic-title-row">
+          <span class="topic-name" :title="node.name">{{ node.name }}</span>
+          <div class="topic-status">
+            <span v-if="node.isClosed" class="closed">zamkniety</span>
+            <span v-if="node.isHidden" class="hidden">ukryty</span>
+          </div>
+        </div>
+        <div v-if="node.tags && node.tags.length" class="tags">
+          <span v-for="tag in node.tags" :key="tag._id || tag" class="tag">
+            #{{ getTagName(tag) }}
           </span>
-        </span>
+        </div>
       </div>
 
       <div v-if="isExpanded" class="topic-options">
-        <button class="btn-option" @click="toggleChildren">Wyswietl podtematy</button>
-        <button class="btn-option btn-open-topic" @click="handleOpen">🡺</button>
+        <div class="topic-options-primary">
+          <button class="btn-option" @click="toggleChildren">Wyswietl podtematy</button>
+          <button class="btn-option btn-open-topic" @click="handleOpen">Otworz</button>
+        </div>
         <div v-if="canModerate" class="topic-actions">
-          <button 
+          <button
             v-if="!node.isClosed"
-            @click="handleCloseTopic" 
+            @click="handleCloseTopic"
             class="btn-action btn-close"
             title="Zamknij temat"
           >
             Zamknij
           </button>
-          <button 
+          <button
             v-else
-            @click="handleOpenTopic" 
+            @click="handleOpenTopic"
             class="btn-action btn-open"
             title="Otworz temat"
           >
             Otworz
           </button>
-          <button 
+          <button
             v-if="!node.isHidden"
-            @click="handleHideTopic" 
+            @click="handleHideTopic"
             class="btn-action btn-hide"
             title="Ukryj temat"
           >
             Ukryj
           </button>
-          <button 
+          <button
             v-else
-            @click="handleUnhideTopic" class="btn-action btn-unhide" title="Odkryj temat">
+            @click="handleUnhideTopic"
+            class="btn-action btn-unhide"
+            title="Odkryj temat"
+          >
             Odkryj
           </button>
         </div>
@@ -250,10 +257,11 @@ onBeforeUnmount(() => {
 .topic-title {
   cursor: pointer;
   border: 3px solid #ffff00;
-  padding: 15px;
+  padding: 18px;
   border-radius: 8px;
   background-color: rgba(255, 255, 0, 0.05);
   transition: all 0.2s ease;
+  min-height: 90px;
 }
 
 .topic-title:hover {
@@ -264,11 +272,34 @@ onBeforeUnmount(() => {
 .topic-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.topic-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .topic-name {
   cursor: pointer;
+  display: block;
+  font-size: 1.1em;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .closed {
@@ -286,15 +317,16 @@ span {
 }
 
 .tags {
-  margin-left: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .tag {
   background: #037e2a;
   color: #ffff00;
   border-radius: 4px;
-  padding: 0 0.4em;
-  margin-left: 0.2em;
+  padding: 0.2em 0.55em;
   font-size: 0.85em;
 }
 
@@ -302,7 +334,7 @@ span {
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .btn-action {
@@ -353,8 +385,15 @@ span {
 
 .topic-options {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.topic-options-primary {
+  display: flex;
   gap: 10px;
-  margin-top: 10px;
   flex-wrap: wrap;
 }
 

@@ -24,7 +24,7 @@ const sentinel = ref(null);
 const currentPage = ref(1);
 const totalPages = ref(1);
 const isLoadingMore = ref(false);
-const pageSize = 20;
+const pageSize = 15;
 let observer = null;
 
 const filteredTree = computed(() => {
@@ -175,8 +175,8 @@ onBeforeUnmount(() => {
 
     .topics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
         margin-top: 20px;
         width: 100%;
         flex: 1;
@@ -195,13 +195,13 @@ onBeforeUnmount(() => {
 
     @media (max-width: 1200px) {
         .topics-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         }
     }
 
     @media (max-width: 768px) {
         .topics-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         }
     }
 
