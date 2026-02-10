@@ -11,7 +11,10 @@ const useTopicsStore = defineStore("topics", () => {
     const rootPagination = ref({ page: 1, pages: 1, total: 0, limit: 20 });
 
     const normalizeTopicId = (value) => {
-        if (!value) return null;
+        if (!value) {
+            return null;
+        }
+        
         if (typeof value === 'object') {
             return value._id || value.id || null;
         }

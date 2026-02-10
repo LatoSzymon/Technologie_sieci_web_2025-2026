@@ -29,8 +29,12 @@ export const useSocketStore = defineStore('socket', () => {
     };
 
     const isViewingTopic = (topicId) => {
-        if (!topicId) return false;
-        if (currentTopicId.value === topicId) return true;
+        if (!topicId) {
+            return false;
+        }
+        if (currentTopicId.value === topicId) {
+            return true
+        };
         const currentPath = router.currentRoute.value?.path || '';
         return currentPath === `/topics/${topicId}`;
     };
@@ -407,7 +411,7 @@ export const useSocketStore = defineStore('socket', () => {
                     type: 'success',
                     message: data?.message || 'Zostałeś odblokowany w tym temacie'
                 });
-                if (router.currentRoute.value?.path === `/topics/${data.topicId}`) {
+                if (isViewingTopic(data.topicId)) {
                     refreshTopicData(data.topicId);
                 }
                 return;
