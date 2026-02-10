@@ -15,39 +15,39 @@ const getAllSubtopics = async (topicId) => {
     return subtopics;
 };
 
-const isUserBlockedInTopic = (topic, userId) => {
-    if (!topic || !userId) return false;
+// const isUserBlockedInTopic = (topic, userId) => {
+//     if (!topic || !userId) return false;
     
-    const userIdStr = userId.toString ? userId.toString() : String(userId);
+//     const userIdStr = userId.toString ? userId.toString() : String(userId);
 
-    const isBanned = topic.bannedUsersIds.some(id => {
-        const idStr = id.toString ? id.toString() : String(id);
-        return idStr === userIdStr;
-    });
+//     const isBanned = topic.bannedUsersIds.some(id => {
+//         const idStr = id.toString ? id.toString() : String(id);
+//         return idStr === userIdStr;
+//     });
     
-    if (!isBanned) return false;
+//     if (!isBanned) return false;
 
-    if (topic.blockedUserExceptions && Array.isArray(topic.blockedUserExceptions)) {
-        const exception = topic.blockedUserExceptions.find(exc => {
-            const excUserIdStr = exc.userId.toString ? exc.userId.toString() : String(exc.userId);
-            return excUserIdStr === userIdStr;
-        });
+//     if (topic.blockedUserExceptions && Array.isArray(topic.blockedUserExceptions)) {
+//         const exception = topic.blockedUserExceptions.find(exc => {
+//             const excUserIdStr = exc.userId.toString ? exc.userId.toString() : String(exc.userId);
+//             return excUserIdStr === userIdStr;
+//         });
 
-        if (exception && exception.allowedInTopicIds && Array.isArray(exception.allowedInTopicIds)) {
-            const topicIdStr = topic._id.toString ? topic._id.toString() : String(topic._id);
-            const isInAllowedList = exception.allowedInTopicIds.some(allowedId => {
-                const allowedIdStr = allowedId.toString ? allowedId.toString() : String(allowedId);
-                return allowedIdStr === topicIdStr;
-            });
+//         if (exception && exception.allowedInTopicIds && Array.isArray(exception.allowedInTopicIds)) {
+//             const topicIdStr = topic._id.toString ? topic._id.toString() : String(topic._id);
+//             const isInAllowedList = exception.allowedInTopicIds.some(allowedId => {
+//                 const allowedIdStr = allowedId.toString ? allowedId.toString() : String(allowedId);
+//                 return allowedIdStr === topicIdStr;
+//             });
 
-            if (isInAllowedList) {
-                return false;
-            }
-        }
-    }
+//             if (isInAllowedList) {
+//                 return false;
+//             }
+//         }
+//     }
 
-    return true;
-};
+//     return true;
+// };
 
 
 const blockUserInTopic = async (req, res) => {
@@ -451,9 +451,7 @@ const updateTopic = async (req, res) => {
             return res.status(404).json({ message: "Temat nie istnieje" });
         }
 
-        const isModerator = topic.ownerId.equals(userId) || 
-                           topic.moderatorsId.some(id => id.equals(userId)) || 
-                           req.user.role === "admin";
+        const isModerator = topic.ownerId.equals(userId) || topic.moderatorsId.some(id => id.equals(userId)) || req.user.role === "admin";
         
         if (!isModerator) {
             return res.status(403).json({ 
@@ -461,9 +459,13 @@ const updateTopic = async (req, res) => {
             });
         }
         
-        if (name) topic.name = name;
-        if (description !== undefined) topic.description = description;
-        
+        if (name) {
+            topic.name = name;
+        }
+
+        if (description !== undefined) {
+            topic.description = description;
+        }
         await topic.save();
         
         try {
@@ -584,9 +586,7 @@ const removeModerator = async (req, res) => {
             return res.status(404).json({ message: "Temat nie istnieje" });
         }
 
-        const isModerator = topic.ownerId.equals(currentUserId) || 
-                           topic.moderatorsId.some(id => id.equals(currentUserId)) || 
-                           req.user.role === "admin";
+        const isModerator = topic.ownerId.equals(currentUserId) || topic.moderatorsId.some(id => id.equals(currentUserId)) || req.user.role === "admin";
         if (!isModerator) {
             return res.status(403).json({ 
                 message: "Brak uprawnień do usunięcia moderatora" 
@@ -831,10 +831,20 @@ const getTopicParticipants = async (req, res) => {
         const usersMap = new Map();
         for (const participant of participants) {
             const user = participant.userId;
-            if (!user) continue;
-            if (user.role === 'admin') continue;
+            if (!user) {
+                continue;
+            }
+            
+            if (user.role === 'admin') {
+                continue
+            };
+            
             const userIdStr = user._id.toString();
-            if (excludedIds.has(userIdStr)) continue;
+            
+            if (excludedIds.has(userIdStr)) {
+                continue
+            };
+
             if (!usersMap.has(userIdStr)) {
                 usersMap.set(userIdStr, {
                     _id: user._id,

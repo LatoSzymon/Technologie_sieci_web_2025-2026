@@ -19,13 +19,6 @@ const postSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
-    // codeBlocks: [{
-    //     language: {
-    //         type: String,
-    //         default: 'javascript'
-    //     },
-    //     code: String
-    // }],
     replyTo: {
         type: Schema.Types.ObjectId,
         ref: "Post",

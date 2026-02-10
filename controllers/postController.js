@@ -1,17 +1,23 @@
 const Post = require("../models/Post");
 const Topic = require("../models/Topic");
 const TopicParticipant = require("../models/TopicParticipant");
-const { post } = require("../routes/userRoutes");
 
 const toId = v => (v?.toString ? v.toString() : String(v));
 const hasId = (arr, id) => arr?.some(x => toId(x) === toId(id));
 
 const isUserBlockedInTopic = (topic, userId) => {
-  if (!topic || !userId) return false;
-  if (!hasId(topic.bannedUsersIds, userId)) return false;
+  if (!topic || !userId) {
+    return false;
+  }
+  if (!hasId(topic.bannedUsersIds, userId)){
+    return false;
+  };
 
   const exc = topic.blockedUserExceptions?.find(e => hasId([e.userId], userId));
-  if (exc?.allowedInTopicIds?.length && hasId(exc.allowedInTopicIds, topic._id)) return false;
+  if (exc?.allowedInTopicIds?.length && hasId(exc.allowedInTopicIds, topic._id)) {
+        return false;
+    };
+
   return true;
 };
 
@@ -69,14 +75,6 @@ const createPost = async (req, res) => {
         try {
             const io = req.app.get('io');
             if (io) {
-                console.log(`Emitting post:new to topic:${topicId}`);
-                console.log(`Post data:`, {
-                    id: post._id,
-                    topicId: post.topicId,
-                    content: post.content.substring(0, 50) + '...',
-                    author: post.authorId?.login
-                });
-
                 io.to(`topic:${topicId}`).emit("post:new", post);
 
                 const participantPayload = {
@@ -112,7 +110,6 @@ const createPost = async (req, res) => {
                         console.error('WebSocket error (reply notify):', notifyErr);
                     }
                 }
-                console.log(`Event emitted successfully`);
             } else {
                 console.error('io is not available on app');
             }

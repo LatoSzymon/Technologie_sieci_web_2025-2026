@@ -79,7 +79,7 @@ const login = async (req, res) => {
         const passwordOk = await bcrypt.compare(password, user.hash);
 
         if (!passwordOk) {
-            return res.status(401).json({ message: "Nieprawidłowe dane logowania, hasło nieok" });
+            return res.status(401).json({ message: "Nieprawidłowe dane logowania. Błędne Hasło" });
         }
 
         if (user.isBlocked) {
@@ -133,8 +133,7 @@ const updateProfile = async (req, res) => {
     try {
         const userId = req.user.userId;
         const { login } = req.body;
-        
-        // Walidacja unikalności nowego loginu
+
         if (login) {
             const exists = await User.findOne({ login, _id: { $ne: userId } });
             if (exists) {
@@ -190,16 +189,14 @@ const changePassword = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "Użytkownik nie znaleziony" });
         }
-        
-        // Walidacja starego hasła
+
         const passwordMatch = await bcrypt.compare(oldPassword, user.hash);
         if (!passwordMatch) {
             return res.status(401).json({ 
                 message: "Stare hasło jest nieprawidłowe" 
             });
         }
-        
-        // Haszuj nowe hasło
+
         const newHash = await bcrypt.hash(newPassword, 12);
         user.hash = newHash;
         await user.save();
@@ -216,6 +213,7 @@ const changePassword = async (req, res) => {
         return res.status(200).json({ 
             message: "Hasło zostało zmienione" 
         });
+        
     } catch (error) {
         return res.status(500).json({ 
             message: "Błąd przy zmianie hasła", 
