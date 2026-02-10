@@ -18,10 +18,8 @@ const authStore = defineStore('auth', () => {
             user.value = res;
             
             console.log('User fetched:', res);
-            
-            // Po zalogowaniu połącz WebSocket
+
             if (res) {
-                console.log('Connecting WebSocket...');
                 const socketStore = useSocketStore();
                 socketStore.connect();
             }

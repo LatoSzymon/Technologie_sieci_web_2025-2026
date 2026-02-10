@@ -235,7 +235,10 @@ export const useSocketStore = defineStore('socket', () => {
             console.log('[WebSocket] post:new received', post);
             const postStore = usePostStore();
             const topicId = post.topicId?._id || post.topicId;
-            postStore.addPost(topicId, post);
+            const paginationEntry = postStore.paginationByTopic?.value?.get(topicId);
+            if (paginationEntry && paginationEntry.page >= paginationEntry.pages) {
+                postStore.addPost(topicId, post);
+            }
             if (topicId && !isViewingTopic(topicId)) {
                 pushNotification({
                     type: 'info',

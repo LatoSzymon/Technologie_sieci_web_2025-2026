@@ -15,6 +15,16 @@ const getAllSubtopics = async (topicId) => {
     return subtopics;
 };
 
+const emitToTopicTree = async (io, topicId, event, payloadFactory) => {
+    if (!io || !topicId) return;
+    const subtopics = await getAllSubtopics(topicId);
+    const targets = [topicId, ...subtopics];
+    targets.forEach(id => {
+        const payload = typeof payloadFactory === 'function' ? payloadFactory(id) : payloadFactory;
+        io.to(`topic:${id}`).emit(event, payload);
+    });
+};
+
 // const isUserBlockedInTopic = (topic, userId) => {
 //     if (!topic || !userId) return false;
     
@@ -87,6 +97,7 @@ const blockUserInTopic = async (req, res) => {
         await topic.save();
 
         const subtopics = await getAllSubtopics(topicId);
+        const subtopicPayloads = [];
 
         if (subtopics.length > 0) {
             for (const subtopicId of subtopics) {
@@ -106,6 +117,11 @@ const blockUserInTopic = async (req, res) => {
                 }
                 
                 await subtopic.save();
+                subtopicPayloads.push({
+                    _id: subtopic._id,
+                    bannedUsersIds: subtopic.bannedUsersIds,
+                    blockedUserExceptions: subtopic.blockedUserExceptions
+                });
             }
         }
 
@@ -123,6 +139,21 @@ const blockUserInTopic = async (req, res) => {
                     }
                 };
                 io.to(`topic:${topicId}`).emit('topic:userBlocked', payload);
+                if (subtopics.length > 0) {
+                    subtopics.forEach(subtopicId => {
+                        const subtopicData = subtopicPayloads.find(entry => entry._id.equals(subtopicId));
+                        io.to(`topic:${subtopicId}`).emit('topic:userBlocked', {
+                            userId,
+                            topicId: subtopicId,
+                            exceptTopicIds,
+                            topic: subtopicData ? {
+                                _id: subtopicData._id,
+                                bannedUsersIds: subtopicData.bannedUsersIds,
+                                blockedUserExceptions: subtopicData.blockedUserExceptions
+                            } : undefined
+                        });
+                    });
+                }
                 io.to(`user:${userId}`).emit('topic:userBlocked', payload);
             }
         } catch (e) {
@@ -297,6 +328,7 @@ const unblockUserInTopic = async (req, res) => {
         await topic.save();
 
         const subtopics = await getAllSubtopics(topicId);
+        let subtopicPayloads = [];
 
         if (subtopics.length > 0) {
             await Topic.updateMany(
@@ -308,6 +340,10 @@ const unblockUserInTopic = async (req, res) => {
                 { _id: { $in: subtopics } },
                 { $pull: { blockedUserExceptions: { userId: userId } } }
             );
+
+            subtopicPayloads = await Topic.find({ _id: { $in: subtopics } })
+                .select('_id bannedUsersIds blockedUserExceptions')
+                .lean();
         }
 
         try {
@@ -324,6 +360,21 @@ const unblockUserInTopic = async (req, res) => {
                     message: 'Zostałeś odblokowany w temacie'
                 };
                 io.to(`topic:${topicId}`).emit('topic:userUnblocked', payload);
+                if (subtopics.length > 0) {
+                    subtopics.forEach(subtopicId => {
+                        const subtopicData = subtopicPayloads.find(entry => String(entry._id) === String(subtopicId));
+                        io.to(`topic:${subtopicId}`).emit('topic:userUnblocked', {
+                            userId,
+                            topicId: subtopicId,
+                            topic: subtopicData ? {
+                                _id: subtopicData._id,
+                                bannedUsersIds: subtopicData.bannedUsersIds,
+                                blockedUserExceptions: subtopicData.blockedUserExceptions
+                            } : undefined,
+                            message: 'Zostałeś odblokowany w temacie'
+                        });
+                    });
+                }
                 io.to(`user:${userId}`).emit('topic:userUnblocked', payload);
             }
         } catch (e) {
@@ -556,6 +607,14 @@ const promoteModerator = async (req, res) => {
                     userId, 
                     topicId 
                 });
+                if (subtopics.length > 0) {
+                    subtopics.forEach(subtopicId => {
+                        io.to(`topic:${subtopicId}`).emit('topic:moderatorAdded', {
+                            userId,
+                            topicId: subtopicId
+                        });
+                    });
+                }
             }
         } catch (e) {
             console.error('WebSocket error (promoteModerator):', e);
@@ -624,6 +683,14 @@ const removeModerator = async (req, res) => {
                     userId, 
                     topicId 
                 });
+                if (subtopics.length > 0) {
+                    subtopics.forEach(subtopicId => {
+                        io.to(`topic:${subtopicId}`).emit('topic:moderatorRemoved', {
+                            userId,
+                            topicId: subtopicId
+                        });
+                    });
+                }
             }
         } catch (e) {
             console.error('WebSocket error (removeModerator):', e);
@@ -902,8 +969,10 @@ const closeTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat został zamknięty"}
-                io.to(`topic:${topicId}`).emit('topic:closed', payload);
-                io.emit('topic:closed', payload);
+                await emitToTopicTree(io, topicId, 'topic:closed', (targetId) => ({
+                    ...payload,
+                    topicId: targetId
+                }));
             }
         } catch (e) {
             console.error('WebSocket error (closeTopic):', e);
@@ -949,8 +1018,10 @@ const openTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat został otwarty"}
-                io.to(`topic:${topicId}`).emit('topic:opened', payload);
-                io.emit('topic:opened', payload)
+                await emitToTopicTree(io, topicId, 'topic:opened', (targetId) => ({
+                    ...payload,
+                    topicId: targetId
+                }));
             }
         } catch (e) {
             console.error('WebSocket error (openTopic):', e);
@@ -996,8 +1067,10 @@ const hideTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = { topicId, parentId: topic.parent, message: 'Ten temat został ukryty' };
-                io.to(`topic:${topicId}`).emit('topic:hidden', payload);
-                io.emit('topic:hidden', payload);
+                await emitToTopicTree(io, topicId, 'topic:hidden', (targetId) => ({
+                    ...payload,
+                    topicId: targetId
+                }));
             }
         } catch (e) {
             console.error('WebSocket error (hideTopic):', e);
@@ -1043,8 +1116,10 @@ const unhideTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat jest teraz widoczny"}
-                io.to(`topic:${topicId}`).emit('topic:unhidden', payload);
-                io.emit('topic:unhidden', payload);
+                await emitToTopicTree(io, topicId, 'topic:unhidden', (targetId) => ({
+                    ...payload,
+                    topicId: targetId
+                }));
             }
         } catch (e) {
             console.error('WebSocket error (unhideTopic):', e);
