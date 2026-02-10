@@ -8,6 +8,7 @@ import { useTopicsStore } from '../stores/topics';
 import { authStore } from '../stores/auth';
 import api from '../services/api';
 import { usePostStore } from '../stores/posts';
+import * as topicService from '../services/topicService';
 import { blockUser as globalBlockUser } from '../services/adminService';
 import * as postService from '../services/postService';
 
@@ -140,6 +141,14 @@ const isAuthorBlockedInTopic = computed(() => {
   return true;
 });
 
+const canPromoteFromPost = computed(() => {
+  if (!canModerate.value) return false;
+  if (!authorId.value) return false;
+  if (isAuthorAdmin.value || isAuthorModerator.value) return false;
+  if (isAuthorBlockedGlobally.value || isAuthorBlockedInTopic.value) return false;
+  return true;
+});
+
 const canBlockInTopic = computed(() => {
   if (!(canModerate.value || isAdmin.value)) return false;
   if (!authorId.value) return false;
@@ -188,6 +197,7 @@ const renderedContent = computed(() => {
 const isBlocking = ref(false);
 const isDeleting = ref(false);
 const isLiking = ref(false);
+const isPromoting = ref(false);
 const isEditingPost = ref(false);
 const editContent = ref('');
 const editTextarea = ref(null);
@@ -270,6 +280,25 @@ const blockUserGlobally = async () => {
     error.value = e?.response?.data?.message || 'Błąd blokowania użytkownika globalnie';
   } finally {
     isBlocking.value = false;
+  }
+};
+
+const promoteAuthorToModerator = async () => {
+  if (!authorId.value || !topics.currentTopic?._id) return;
+  isPromoting.value = true;
+  error.value = '';
+  try {
+    await topicService.promoteModerator(topics.currentTopic._id, authorId.value);
+    if (topics.currentTopic && !topicModeratorIds.value.includes(authorId.value)) {
+      const entry = typeof props.post.authorId === 'object'
+        ? { _id: authorId.value, login: props.post.authorId.login }
+        : authorId.value;
+      topics.currentTopic.moderatorsId = [...(topics.currentTopic.moderatorsId || []), entry];
+    }
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Błąd promowania moderatora';
+  } finally {
+    isPromoting.value = false;
   }
 };
 
@@ -429,6 +458,11 @@ const toggleLike = async () => {
         </template>
         <template v-if="canBlockGlobally">
           <button @click="blockUserGlobally" :disabled="isBlocking" class="action-btn action-admin btn-block-global" title="Zablokuj globalnie">Blokuj globalnie</button>
+        </template>
+        <template v-if="canPromoteFromPost">
+          <button @click="promoteAuthorToModerator" :disabled="isPromoting" class="action-btn action-mod btn-promote" title="Promuj na moderatora">
+            Promuj na moderatora
+          </button>
         </template>
         <button @click="emit('reply', { post, author: authorName })" class="action-btn action-user btn-reply">Odpowiedz</button>
       </div>
