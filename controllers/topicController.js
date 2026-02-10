@@ -172,10 +172,13 @@ const createTopic = async (req, res) => {
         }
 
         const inheritModeratorsId = parent ? [...parent.moderatorsId, parent.ownerId] : [];
+        const inheritBannedUsersIds = parent ? [...parent.bannedUsersIds] : [];
 
         const topic = new Topic({
             name, description: description || '', tags: validatedTags, ownerId: userId,
-            moderatorsId: inheritModeratorsId.filter(id => !id.equals(userId)), parent: parentId || null
+            moderatorsId: inheritModeratorsId.filter(id => !id.equals(userId)),
+            bannedUsersIds: inheritBannedUsersIds,
+            parent: parentId || null
         })
 
         await topic.save();

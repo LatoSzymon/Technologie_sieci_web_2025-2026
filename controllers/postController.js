@@ -202,7 +202,17 @@ const deletePost = async (req, res) => {
             return res.status(404).json({message: "Nie udało się znaleźć posta o tym id"});    
         }
 
-        if (userRole === "admin" || userId === post.authorId) {
+        const topic = await Topic.findById(post.topicId);
+        if (!topic) {
+            return res.status(404).json({message: "Nie znaleziono tematu dla tego posta"});
+        }
+
+        const userIdStr = userId?.toString ? userId.toString() : String(userId);
+        const authorIdStr = post.authorId?.toString ? post.authorId.toString() : String(post.authorId);
+        const isOwner = topic.ownerId?.toString ? topic.ownerId.toString() === userIdStr : String(topic.ownerId) === userIdStr;
+        const isModerator = topic.moderatorsId?.some(id => (id?.toString ? id.toString() : String(id)) === userIdStr);
+
+        if (userRole === "admin" || authorIdStr === userIdStr || isOwner || isModerator) {
             post.isDeleted = true;
             await post.save();
 
@@ -222,7 +232,7 @@ const deletePost = async (req, res) => {
             
             return res.status(200).json({message: "Usunięto post", post});
         } else {
-             return res.status(403).json({message: "Aniś admin, ani właściciel posta"});
+               return res.status(403).json({message: "Brak uprawnień do usunięcia posta"});
         }
 
 
