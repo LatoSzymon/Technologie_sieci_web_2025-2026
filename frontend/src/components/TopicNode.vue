@@ -7,7 +7,8 @@ import { useSocketStore } from '../stores/socket';
 
 const socketStore = useSocketStore();
 const props = defineProps({
-  node: { type: Object, required: true }
+  node: { type: Object, required: true },
+  depth: { type: Number, default: 0 }
 });
 const emit = defineEmits(["select", "refresh"]);
 const auth = authStore();
@@ -169,7 +170,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="topic-node">
+  <div class="topic-node" :style="{ '--depth': depth }">
     <div class="topic-title" @click="toggleOptions">
       <div class="topic-header">
         <div class="topic-title-row">
@@ -239,6 +240,7 @@ onBeforeUnmount(() => {
         v-for="child in children"
         :key="child._id"
         :node="child"
+        :depth="depth + 1"
         @select="$emit('select', $event)"
         @refresh="handleRefresh"
       />
@@ -252,16 +254,38 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   margin-bottom: 10px;
+  width: 100%;
+  --indent: 12px;
+  --indent-max: 6;
 }
 
 .topic-title {
   cursor: pointer;
   border: 2px solid var(--border);
   padding: 14px;
+  padding-left: calc(14px + clamp(0px, calc(var(--depth) * var(--indent)), calc(var(--indent-max) * var(--indent))));
   border-radius: 6px;
   background-color: rgba(229, 242, 103, 0.05);
   transition: all 0.2s ease;
   min-height: 64px;
+  position: relative;
+}
+
+.topic-title::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: clamp(0px, calc(var(--depth) * 2px), 12px);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(229, 242, 103, 0.25) 0px,
+    rgba(229, 242, 103, 0.25) 6px,
+    rgba(229, 242, 103, 0) 6px,
+    rgba(229, 242, 103, 0) 12px
+  );
+  opacity: 0.6;
 }
 
 .topic-title:hover {
@@ -427,7 +451,7 @@ span {
 }
 
 .topic-children > .topic-node {
-  margin: 5px;
+  margin: 8px 0 0;
   border: none;
 }
 </style>
