@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const Topic = require("../models/Topic");
 const Post = require("../models/Post");
+const { deleteUserSchema } = require("../validation/schemas");
+const { validate } = require("../validation/validate");
 // const {getAllSubtopics} = require("./topicController");
 
 const pickRandom = (arr) => {
@@ -229,11 +231,12 @@ const listAllNonAdminUsers = async (req, res) => {
 
 const deleteUser = async (req, res) => {
     try {
-        const {userId} = req.body;
-
-        if (!userId) {
-            return res.status(400).json({message: "Nie podano ID użytkownika"});
+        const parsed = validate(deleteUserSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const {userId} = parsed.data;
 
         const user = await User.findById(userId);
 

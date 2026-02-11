@@ -1,6 +1,8 @@
 const Post = require("../models/Post");
 const Topic = require("../models/Topic");
 const TopicParticipant = require("../models/TopicParticipant");
+const { createPostSchema, updatePostSchema } = require("../validation/schemas");
+const { validate } = require("../validation/validate");
 
 const toId = v => (v?.toString ? v.toString() : String(v));
 const hasId = (arr, id) => arr?.some(x => toId(x) === toId(id));
@@ -23,12 +25,13 @@ const isUserBlockedInTopic = (topic, userId) => {
 
 const createPost = async (req, res) => {
     try {
-        const {topicId, content, replyTo, tags} = req.body;
-        const authorId = req.user.userId;
-
-        if (!topicId || !content) {
-            return res.status(400).json({message: "Nie podano kluczowych elementów"});
+        const parsed = validate(createPostSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const {topicId, content, replyTo, tags} = parsed.data;
+        const authorId = req.user.userId;
 
         const topic = await Topic.findById(topicId);
 
@@ -247,13 +250,14 @@ const deletePost = async (req, res) => {
 const updatePost = async (req, res) => {
     try {
         const {postId} = req.params;
-        const {content} = req.body;
+        const parsed = validate(updatePostSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
+        }
+
+        const {content} = parsed.data;
         const userId = req.user.userId;
         const userRole = req.user.role;
-
-        if (!content || !content.trim()) {
-            return res.status(400).json({message: "Treść posta nie może być pusta"});
-        }
 
         const post = await Post.findById(postId);
 
@@ -296,14 +300,14 @@ const getDeletedPosts = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
 
         if (req.user.role !== 'admin') {
-            return req.status(403).json({message: "Nie masz do tego uprawnień"});
+            return res.status(403).json({message: "Nie masz do tego uprawnień"});
         }
 
         const posts = await Post.find({topicId, isDeleted: true})
             .sort({createdAt: -1})
             .skip((page-1) * limit)
             .limit(limit)
-            .populate("authorId", "login email")
+            .populate("authorId", "login mail")
             .populate('tags');
 
         const total = await Post.countDocuments({topicId, isDeleted: true});
