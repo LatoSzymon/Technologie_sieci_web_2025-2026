@@ -2,6 +2,7 @@
   <div v-if="notifications.length" class="notifications">
     <div v-for="n in notifications" :key="n.id" class="notification" :class="n.type || 'info'">
       <span>{{ n.message }}</span>
+      <span>{{ formatTime(n.ts) }}</span>
       <button @click="remove(n.id)" class="close-notification">X</button>
     </div>
   </div>
@@ -16,6 +17,13 @@ const notifications = computed(() => socketStore.notifications);
 
 const remove = (id) => {
   socketStore.removeNotification(id);
+};
+
+const formatTime = (ts) => {
+  if (!ts) return '';
+  const date = ts instanceof Date ? ts : new Date(ts);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 };
 
 watch(
