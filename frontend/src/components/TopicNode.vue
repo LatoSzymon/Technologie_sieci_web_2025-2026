@@ -87,7 +87,6 @@ const refreshChildren = async () => {
 
 const handleRefresh = async () => {
   await refreshChildren();
-  emit("refresh");
 }
 
 const selectNode = () => {
@@ -103,7 +102,6 @@ const handleCloseTopic = async (e) => {
   try {
     error.value = '';
     await closeTopic(props.node._id);
-    emit("refresh");
   } catch (err) {
     error.value = 'Błąd podczas zamykania tematu';
     console.error(err);
@@ -115,7 +113,6 @@ const handleOpenTopic = async (e) => {
   try {
     error.value = '';
     await openTopic(props.node._id);
-    emit("refresh");
   } catch (err) {
     error.value = 'Błąd podczas otwierania tematu';
     console.error(err);
@@ -127,7 +124,6 @@ const handleHideTopic = async (e) => {
   try {
     error.value = '';
     await hideTopic(props.node._id);
-    emit("refresh");
   } catch (err) {
     error.value = 'Błąd podczas ukrywania tematu';
     console.error(err);
@@ -139,16 +135,49 @@ const handleUnhideTopic = async (e) => {
   try {
     error.value = '';
     await unhideTopic(props.node._id);
-    emit("refresh");
   } catch (err) {
     error.value = 'Błąd podczas odkrywania tematu';
     console.error(err);
   }
 };
 
-const handleTopicSync = () => {
-  if (childrenVisible.value) {
-    refreshChildren();
+const handleTopicSync = (data) => {
+  if (!childrenVisible.value) return;
+
+  const targetId = data?.topic?._id || data?.topicId;
+  if (!targetId) return;
+
+  const parentId = data?.topic?.parent?._id || data?.topic?.parent || data?.parentId;
+  const nodeId = props.node._id;
+
+  if (parentId && parentId !== nodeId) return;
+
+  const idx = children.value.findIndex(child => child?._id === targetId);
+  if (idx === -1) {
+    if (data?.topic && parentId === nodeId) {
+      children.value.push(data.topic);
+    }
+    return;
+  }
+
+  const action = data?.action;
+  if (action === 'hidden' && auth.user?.role !== 'admin') {
+    children.value.splice(idx, 1);
+    return;
+  }
+
+  if (data?.topic) {
+    children.value[idx] = { ...children.value[idx], ...data.topic };
+  } else if (action === 'closed' || action === 'opened') {
+    children.value[idx] = {
+      ...children.value[idx],
+      isClosed: action === 'closed'
+    };
+  } else if (action === 'hidden' || action === 'unhidden') {
+    children.value[idx] = {
+      ...children.value[idx],
+      isHidden: action === 'hidden'
+    };
   }
 };
 

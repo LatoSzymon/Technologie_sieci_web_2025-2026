@@ -94,7 +94,7 @@ const persistLastPage = async (page) => {
     }
 };
 
-const load = async (page = 1, mode = 'replace') => {
+const load = async (page = 1, mode = 'replace', persist = true) => {
     try {
         const data = await postService.fetchPosts(props.topicId, page, pageSize.value);
         postStore.setPosts({
@@ -106,9 +106,16 @@ const load = async (page = 1, mode = 'replace') => {
             mode
         });
         currentPage.value = data.page || page;
-        totalPosts.value = data.total || 0;
-        totalPages.value = data.pages || 0;
-        await persistLastPage(currentPage.value);
+        totalPosts.value = Number.isFinite(data.total)
+            ? data.total
+            : (data.posts || []).length;
+        const fallbackPages = Math.max(1, Math.ceil((totalPosts.value || 0) / pageSize.value));
+        totalPages.value = Number.isFinite(data.pages)
+            ? Math.max(1, data.pages)
+            : fallbackPages;
+        if (persist) {
+            await persistLastPage(currentPage.value);
+        }
     } catch (err) {
         console.error('Error loading posts:', err);
     }
@@ -129,7 +136,8 @@ const handleNewPost = async (post) => {
     console.log(`Comparing topicIds: post=${postTopicId}, current=${currentTopicId}`);
     
     if (postTopicId === currentTopicId) {
-        if (currentPage.value === totalPages.value) {
+        const effectiveTotalPages = Math.max(1, totalPages.value || 0);
+        if (currentPage.value === effectiveTotalPages) {
             postStore.addPost(props.topicId, post);
             totalPosts.value += 1;
             await scrollToBottom();
@@ -190,10 +198,12 @@ const loadMore = async () => {
 const loadRemainingPages = async () => {
     if (isLoadingMore.value) return;
     isLoadingMore.value = true;
+    const pageBefore = currentPage.value;
     try {
         while (currentPage.value < totalPages.value) {
-            await load(currentPage.value + 1, 'append');
+            await load(currentPage.value + 1, 'append', false);
         }
+        await persistLastPage(pageBefore);
     } finally {
         isLoadingMore.value = false;
     }
@@ -298,6 +308,9 @@ const addPost = async () => {
         totalPages.value = Math.max(totalPages.value, Math.ceil(totalPosts.value / pageSize.value));
         await loadRemainingPages();
         const createdId = response?.post?._id || response?.post?.id;
+        if (createdId && !posts.value.some(p => (p._id || p.id) === createdId)) {
+            postStore.addPost(props.topicId, response.post);
+        }
         if (createdId) {
             await jumpToPost(createdId);
         } else {

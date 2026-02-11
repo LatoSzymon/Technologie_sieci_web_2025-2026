@@ -21,8 +21,8 @@ const search = ref('');
 const tagFilter = ref('');
 const allTags = ref([]);
 const sentinel = ref(null);
-const currentPage = ref(1);
-const totalPages = ref(1);
+const currentPage = computed(() => topics.rootPagination.page || 1);
+const totalPages = computed(() => topics.rootPagination.pages || 1);
 const isLoadingMore = ref(false);
 const pageSize = 15;
 let observer = null;
@@ -58,9 +58,7 @@ const handleRefresh = async () => {
 };
 
 const loadFirstPage = async () => {
-        const data = await topics.fetchRootPage({ page: 1, limit: pageSize, mode: 'replace' });
-        currentPage.value = data.page || 1;
-        totalPages.value = data.pages || 1;
+        await topics.fetchRootPage({ page: 1, limit: pageSize, mode: 'replace' });
 };
 
 const loadMore = async () => {
@@ -69,9 +67,7 @@ const loadMore = async () => {
         isLoadingMore.value = true;
         try {
             const nextPage = currentPage.value + 1;
-            const data = await topics.fetchRootPage({ page: nextPage, limit: pageSize, mode: 'append' });
-            currentPage.value = data.page || nextPage;
-            totalPages.value = data.pages || totalPages.value;
+            await topics.fetchRootPage({ page: nextPage, limit: pageSize, mode: 'append' });
         } finally {
             isLoadingMore.value = false;
         }

@@ -88,6 +88,26 @@ export const useSocketStore = defineStore('socket', () => {
             const topic = data?.topic;
             const topicId = topic?._id || data?.topicId || currentTopicId.value;
 
+            const resolveCanSeeHidden = (id) => {
+                const auth = authStore();
+                if (auth.user?.role === 'admin') return true;
+                const userId = auth.user?._id || auth.user?.id;
+                if (!userId) return false;
+
+                if (topicsStore.currentTopic?._id && topicsStore.currentTopic._id === id) {
+                    const ownerId = topicsStore.currentTopic.ownerId?._id || topicsStore.currentTopic.ownerId;
+                    if (ownerId && String(ownerId) === String(userId)) return true;
+                    const moderators = topicsStore.currentTopic.moderatorsId || [];
+                    return moderators.some(mod => String(mod?._id || mod) === String(userId));
+                }
+
+                const node = topicsStore.getTopicFromTree?.(id);
+                const ownerId = node?.ownerId?._id || node?.ownerId;
+                if (ownerId && String(ownerId) === String(userId)) return true;
+                const moderators = node?.moderatorsId || [];
+                return moderators.some(mod => String(mod?._id || mod) === String(userId));
+            };
+
             if (topic) {
                 const hasOnlyTagIds = Array.isArray(topic.tags)
                     && topic.tags.length > 0
@@ -122,21 +142,16 @@ export const useSocketStore = defineStore('socket', () => {
 
             if (action === 'hidden' || action === 'unhidden') {
                 const isHidden = action === 'hidden';
-                topicsStore.updateTopicInTree({ _id: topicId, isHidden });
-                topicsStore.mergeCurrentTopic({ _id: topicId, isHidden });
+                const canSeeHidden = resolveCanSeeHidden(topicId);
 
-                if (action === 'hidden') {
-                    try {
-                        const fetched = await topicsStore.fetchTopicData(topicId);
-                        if (fetched) {
-                            topicsStore.upsertTopicInTree(fetched);
-                            topicsStore.mergeCurrentTopic(fetched);
-                        }
-                    } catch (err) {
-                        topicsStore.removeTopicFromTree(topicId);
-                    }
-                    return;
+                if (isHidden && !canSeeHidden) {
+                    topicsStore.removeTopicFromTree(topicId);
+                } else {
+                    topicsStore.updateTopicInTree({ _id: topicId, isHidden });
                 }
+
+                topicsStore.mergeCurrentTopic({ _id: topicId, isHidden });
+                return;
             }
 
             try {

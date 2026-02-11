@@ -46,6 +46,8 @@ const useTopicsStore = defineStore("topics", () => {
         return null;
     };
 
+    const getTopicFromTree = (topicId) => findNodeById(tree.value, topicId);
+
     const updateTopicInTree = (topicPatch) => {
         const topicId = normalizeTopicId(topicPatch);
         if (!topicId) return false;
@@ -143,7 +145,16 @@ const useTopicsStore = defineStore("topics", () => {
             const topics = data.topics || [];
 
             if (mode === 'append') {
-                tree.value = [...tree.value, ...topics];
+                const existingIds = new Set(tree.value.map(node => normalizeTopicId(node)));
+                const merged = [...tree.value];
+                for (const topic of topics) {
+                    const id = normalizeTopicId(topic);
+                    if (!existingIds.has(id)) {
+                        merged.push(topic);
+                        existingIds.add(id);
+                    }
+                }
+                tree.value = merged;
             } else {
                 tree.value = topics;
             }
@@ -284,7 +295,8 @@ const useTopicsStore = defineStore("topics", () => {
         updateTopicInTree,
         upsertTopicInTree,
         removeTopicFromTree,
-        mergeCurrentTopic
+        mergeCurrentTopic,
+        getTopicFromTree
     };
 });
 
