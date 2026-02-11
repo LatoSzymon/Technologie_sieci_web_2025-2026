@@ -57,7 +57,7 @@ const send = () => {
 				<select v-model="toUserId" class="user-select">
 					<option value="">Wybierz użytkownika</option>
 					<option v-for="u in users" :key="u._id || u.id" :value="u._id || u.id">
-						{{ u.login || u.email || u._id || u.id }}
+						{{ u.login || u.mail || u._id || u.id }}
 					</option>
 				</select>
 			</div>

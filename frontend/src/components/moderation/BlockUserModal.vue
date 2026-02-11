@@ -162,7 +162,7 @@ const selectUser = (user) => {
                 @mousedown.prevent="selectUser(user)"
               >
                 <strong>{{ user.login }}</strong>
-                <small>{{ user.email }}</small>
+                <small>{{ user.mail }}</small>
               </div>
             </div>
           </div>
