@@ -22,6 +22,18 @@ async function main() {
   const user1 = await User.create({ login: 'user1', mail: 'user1@progtalk.com', hash: 'user1hash', isApprovedByAdmin: true });
   const user2 = await User.create({ login: 'user2', mail: 'user2@progtalk.com', hash: 'user2hash', isApprovedByAdmin: false });
 
+  const extraUsersPayload = Array.from({ length: 12 }, (_, index) => {
+    const num = index + 3;
+    return {
+      login: `user${num}`,
+      mail: `user${num}@progtalk.com`,
+      hash: `user${num}hash`,
+      isApprovedByAdmin: num % 2 === 0
+    };
+  });
+
+  await User.insertMany(extraUsersPayload);
+
   const tagJS = await Tag.create({ name: 'JavaScript' });
   const tagNode = await Tag.create({ name: 'Node.js' });
 
