@@ -18,7 +18,6 @@ const submit = async () => {
     try {
         const data = { loginOrEmail: loginOrEmail.value, password: password.value };
         await authService.login(data);
-        console.log("fetchuję usera po zalogowaniu");
         await auth.fetchUser();
         if (!auth.isApproved) {
             router.push('/pending');

@@ -4,8 +4,7 @@ const topicSchema = new Schema({
     name: {
         type: String,
         required: true,
-        default: "A topic with no name",
-        unique: true
+        default: "A topic with no name"
     },
     description: {
         type: String,

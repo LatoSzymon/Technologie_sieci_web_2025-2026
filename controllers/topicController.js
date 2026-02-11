@@ -216,6 +216,12 @@ const createTopic = async (req, res) => {
         const inheritModeratorsId = parent ? [...parent.moderatorsId, parent.ownerId] : [];
         const inheritBannedUsersIds = parent ? [...parent.bannedUsersIds] : [];
 
+        const parentKey = parentId || null;
+        const existingTopic = await Topic.findOne({ parent: parentKey, name: topicName });
+        if (existingTopic) {
+            return res.status(409).json({ message: "Temat o tej nazwie juz istnieje w tym miejscu" });
+        }
+
         const topic = new Topic({
             name: topicName, description: description || '', tags: validatedTags, ownerId: userId,
             moderatorsId: inheritModeratorsId.filter(id => !id.equals(userId)),
@@ -592,7 +598,18 @@ const updateTopic = async (req, res) => {
         }
         
         if (name) {
-            topic.name = name;
+            if (name !== topic.name) {
+                const parentKey = topic.parent || null;
+                const existingTopic = await Topic.findOne({
+                    parent: parentKey,
+                    name: name,
+                    _id: { $ne: topic._id }
+                });
+                if (existingTopic) {
+                    return res.status(409).json({ message: "Temat o tej nazwie juz istnieje w tym miejscu" });
+                }
+                topic.name = name;
+            }
         }
 
         if (description !== undefined) {
