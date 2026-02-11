@@ -21,10 +21,14 @@ const tagRoutes = require("./routes/tagRoutes");
 
 const app = express();
 app.use(morgan("dev"));
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
 app.use(cors({
     origin: function(origin, callback) {
-        const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://localhost:5173', 'https://127.0.0.1:5173'];
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -42,17 +46,21 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/tags', tagRoutes);
-app.use('/', () => {
-    console.log("Kontrolny log");
-    
-})
+
+const frontendDistPath = path.join(__dirname, 'frontend', 'dist');
+if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+    app.get(/^(?!\/api).*/, (req, res) => {
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+}
 
 const cert_keypath = path.join(__dirname, 'certificate', 'server.key');
 const cert_certpath = path.join(__dirname, 'certificate', 'server.crt');
 
 
 const dbConnData = {
-    host: process.env.MONGO_HOST || '127.0.0.1',
+    host: process.env.MONGO_HOST || 'mongodb',
     port: process.env.MONGO_PORT || 27017,
     database: process.env.MONGO_DATABASE || 'ProgTalk'
 };
@@ -63,7 +71,7 @@ mongoose
     .then(async (response) => {
         console.log(`Baza: "${response.connections[0].name}"`);
         const apiPort = process.env.PORT || 3000
-        const apiHost = process.env.API_HOST || 'localhost';
+        const apiHost = process.env.API_HOST || '0.0.0.0';
 
         
         const https_port = process.env.HTTPS_PORT || 3443;
@@ -80,7 +88,7 @@ mongoose
         app.set('io', io);
 
         httpsServ.listen(https_port, () => {
-            console.log(`API (https): https://localhost:${https_port}`);
+            console.log(`API (https): https://${apiHost}:${https_port}`);
         })
 
         http.createServer((req, res) => {

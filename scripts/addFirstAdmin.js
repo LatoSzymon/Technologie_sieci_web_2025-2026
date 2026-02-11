@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const User = require('../models/User');
 
 const dbConnData = {
-    host: process.env.MONGO_HOST || '127.0.0.1',
+    host: process.env.MONGO_HOST || 'mongodb',
     port: process.env.MONGO_PORT || 27017,
     database: process.env.MONGO_DATABASE || 'ProgTalk'
 }

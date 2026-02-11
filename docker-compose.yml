@@ -22,24 +22,6 @@ services:
     volumes:
       - ./certificate:/app/certificate:ro
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_HOST: localhost
-        VITE_API_PORT: 3443
-    container_name: progtalk-frontend
-    restart: unless-stopped
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
-    networks:
-      - progtalk-network
-    volumes:
-      - ./certificate:/app/certificate:ro
-
   mongodb:
     image: mongo:7
     container_name: progtalk-mongodb

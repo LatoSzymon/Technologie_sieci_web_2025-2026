@@ -1,3 +1,17 @@
+FROM node:22-alpine as frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/index.html ./
+COPY frontend/vite.config.js ./
+COPY frontend/src/ ./src/
+COPY frontend/public/ ./public/
+
+RUN npm run build
+
 FROM node:18-alpine
 
 WORKDIR /app
@@ -15,6 +29,7 @@ COPY routes/ ./routes/
 COPY scripts/ ./scripts/
 COPY services/ ./services/
 COPY validation/ ./validation/
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
 
 EXPOSE 3000 3443
 

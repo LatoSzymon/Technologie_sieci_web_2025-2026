@@ -6,6 +6,11 @@ import { authStore } from '../stores/auth';
 import { usePostStore } from './posts';
 import router from '../routing';
 
+const resolveSocketHost = () => import.meta.env.VITE_API_HOST || window.location.hostname;
+const resolveSocketPort = () => import.meta.env.VITE_API_PORT || 3443;
+const resolveSocketProtocol = () => (import.meta.env.VITE_API_PROTOCOL || window.location.protocol).replace(':', '');
+const buildSocketUrl = () => `${resolveSocketProtocol()}://${resolveSocketHost()}:${resolveSocketPort()}`;
+
 export const useSocketStore = defineStore('socket', () => {
     const socket = ref(null);
     const connected = ref(false);
@@ -60,7 +65,7 @@ export const useSocketStore = defineStore('socket', () => {
             return;
         }
 
-        socket.value = io('https://localhost:3443', {
+        socket.value = io(buildSocketUrl(), {
             withCredentials: true,
             transports: ['websocket', 'polling']
         });

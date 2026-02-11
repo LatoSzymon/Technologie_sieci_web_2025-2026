@@ -6,7 +6,10 @@ const Tag = require('../models/Tag');
 
 
 async function main() {
-  await mongoose.connect('mongodb://localhost:27017/ProgTalk');
+  const host = process.env.MONGO_HOST || 'mongodb';
+  const port = process.env.MONGO_PORT || 27017;
+  const database = process.env.MONGO_DATABASE || 'ProgTalk';
+  await mongoose.connect(`mongodb://${host}:${port}/${database}`);
 
   await Promise.all([
     User.deleteMany({}),

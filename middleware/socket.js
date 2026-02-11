@@ -4,9 +4,20 @@ const jwt = require("jsonwebtoken");
 const cookie = require("cookie");
 
 const initSocket = (server) => {
+    const allowedOrigins = (process.env.CORS_ORIGINS || '')
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean);
+
     const io = new Server(server, {
         cors: {
-            origin: ['http://localhost:5173', 'https://localhost:5173'],
+            origin: (origin, callback) => {
+                if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
+            },
             methods: ['GET', 'POST'],
             credentials: true
         }
