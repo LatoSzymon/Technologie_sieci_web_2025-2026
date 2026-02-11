@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, watch, computed, ref, nextTick } from 'vue'
 import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../stores/topics';
 import { authStore } from '../stores/auth';
+import { closeTopic, openTopic, hideTopic, unhideTopic } from '../services/adminService';
 import PostList from './PostList.vue';
 import TopicParticipantsModeration from './moderation/TopicParticipantsModeration.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
@@ -115,6 +116,7 @@ const removeModeratorLogin = ref('');
 const isEditingTopic = ref(false);
 const editForm = ref({ name: '', description: '' });
 const editError = ref('');
+const moderationError = ref('');
 const postFormRef = ref(null);
 const showReplyJump = ref(true);
 let replyObserver = null;
@@ -195,6 +197,46 @@ const saveTopic = async () => {
 const cancelEdit = () => {
 	isEditingTopic.value = false;
 	initEditForm();
+};
+
+const handleCloseTopic = async () => {
+	try {
+		moderationError.value = '';
+		await closeTopic(topics.currentTopic._id);
+		await topics.fetchTopic(topics.currentTopic._id);
+	} catch (e) {
+		moderationError.value = e?.response?.data?.message || 'Błąd podczas zamykania tematu';
+	}
+};
+
+const handleOpenTopic = async () => {
+	try {
+		moderationError.value = '';
+		await openTopic(topics.currentTopic._id);
+		await topics.fetchTopic(topics.currentTopic._id);
+	} catch (e) {
+		moderationError.value = e?.response?.data?.message || 'Błąd podczas otwierania tematu';
+	}
+};
+
+const handleHideTopic = async () => {
+	try {
+		moderationError.value = '';
+		await hideTopic(topics.currentTopic._id);
+		await topics.fetchTopic(topics.currentTopic._id);
+	} catch (e) {
+		moderationError.value = e?.response?.data?.message || 'Błąd podczas ukrywania tematu';
+	}
+};
+
+const handleUnhideTopic = async () => {
+	try {
+		moderationError.value = '';
+		await unhideTopic(topics.currentTopic._id);
+		await topics.fetchTopic(topics.currentTopic._id);
+	} catch (e) {
+		moderationError.value = e?.response?.data?.message || 'Błąd podczas odkrywania tematu';
+	}
 };
 
 watch(() => topics.currentTopic, () => {
@@ -354,6 +396,37 @@ onBeforeUnmount(() => {
 				<button v-if="!isEditingTopic" @click="isEditingTopic = true" class="btn btn-block btn-primary">
 					Edytuj temat
 				</button>
+				<div class="mod-actions">
+					<button
+						v-if="!topics.currentTopic.isClosed"
+						@click="handleCloseTopic"
+						class="btn btn-block btn-warning"
+					>
+						Zamknij temat
+					</button>
+					<button
+						v-else
+						@click="handleOpenTopic"
+						class="btn btn-block btn-success"
+					>
+						Otwórz temat
+					</button>
+					<button
+						v-if="!topics.currentTopic.isHidden"
+						@click="handleHideTopic"
+						class="btn btn-block btn-warning"
+					>
+						Ukryj temat
+					</button>
+					<button
+						v-else
+						@click="handleUnhideTopic"
+						class="btn btn-block btn-success"
+					>
+						Odkryj temat
+					</button>
+				</div>
+				<div v-if="moderationError" class="error-message">{{ moderationError }}</div>
 				<div v-if="isEditingTopic" class="edit-form">
 					<div class="form-group">
 						<label class="form-label">Nazwa:</label>
@@ -812,6 +885,13 @@ onBeforeUnmount(() => {
 		display: flex;
 		gap: 10px;
 		flex-wrap: wrap;
+	}
+
+	.mod-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 10px 0 12px;
 	}
 
 	.btn {
