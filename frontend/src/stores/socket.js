@@ -20,6 +20,17 @@ export const useSocketStore = defineStore('socket', () => {
             type: notification.type || 'info',
             message: notification.message || 'Nowe powiadomienie'
         };
+
+        const isDuplicate = notifications.value.some((existing) => {
+            if (!existing) return false;
+            const existingTime = existing.ts instanceof Date ? existing.ts.getTime() : new Date(existing.ts).getTime();
+            const entryTime = entry.ts.getTime();
+            const isSameMessage = existing.type === entry.type && existing.message === entry.message;
+            return isSameMessage && Math.abs(entryTime - existingTime) < 2000;
+        });
+
+        if (isDuplicate) return;
+
         notifications.value.unshift(entry);
         setTimeout(() => removeNotification(entry.id), 5000);
     };
