@@ -1,6 +1,8 @@
 const Tag = require("../models/Tag");
 const Post = require("../models/Post");
 const Topic = require("../models/Topic");
+const { tagSchema } = require("../validation/schemas");
+const { validate } = require("../validation/validate");
 
 
 const getAllTags = async (req, res) => {
@@ -25,11 +27,12 @@ const getTagById = async (req, res) => {
 
 const addTag = async (req, res) => {
     try {
-        const tagName = req.body.name;
-
-        if (!tagName) {
-            return res.status(400).json({ message: "Brak nazwy tagu" });
+        const parsed = validate(tagSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const tagName = parsed.data.name;
 
         const exists = await Tag.findOne({ name: tagName });
         if (exists) { 
@@ -95,8 +98,13 @@ const deleteTag = async (req, res) => {
 const updateTag = async (req, res) => {
     try {
         const tagId = req.params.tagId;
-        const newName = req.body.newName;
-        const updated = await Tag.findByIdAndUpdate(tagId, {name: newName}, {new: true});
+        const payload = { name: req.body.name || req.body.newName };
+        const parsed = validate(tagSchema, payload);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
+        }
+
+        const updated = await Tag.findByIdAndUpdate(tagId, {name: parsed.data.name}, {new: true});
 
         try {
             const io = req.app.get && req.app.get('io');

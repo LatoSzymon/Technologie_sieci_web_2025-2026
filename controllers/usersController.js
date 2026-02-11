@@ -3,19 +3,23 @@ const User = require("../models/User");
 const Topic = require("../models/Topic");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const {
+    registerSchema,
+    loginSchema,
+    updateProfileSchema,
+    changePasswordSchema
+} = require("../validation/schemas");
+const { validate } = require("../validation/validate");
 
 
 const register = async (req, res) => {
     try {
-        const { mail, login, password, confirmPassword } = req.body;
-
-        if (!mail || !login || !password || !confirmPassword) {
-            return res.status(400).json({ message: "mail, login, password i confirmPassword są wymagane" });
+        const parsed = validate(registerSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
 
-        if (password !== confirmPassword) {
-            return res.status(400).json({ message: "Hasła nie są identyczne" });
-        }
+        const { mail, login, password } = parsed.data;
 
         const exists = await User.findOne({ $or: [{ mail }, { login }] });
         if (exists) {
@@ -59,11 +63,12 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { loginOrEmail, password } = req.body;
-
-        if (!loginOrEmail || !password) {
-            return res.status(400).json({ message: "Podaj login lub email oraz hasło" });
+        const parsed = validate(loginSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { loginOrEmail, password } = parsed.data;
 
         const user = await User.findOne({
             $or: [
@@ -132,7 +137,12 @@ const logout = (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { login } = req.body;
+        const parsed = validate(updateProfileSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
+        }
+
+        const { login } = parsed.data;
 
         if (login) {
             const exists = await User.findOne({ login, _id: { $ne: userId } });
@@ -165,25 +175,12 @@ const updateProfile = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { oldPassword, newPassword, confirmPassword } = req.body;
-        
-        if (!oldPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ 
-                message: "Wymagane pola: oldPassword, newPassword, confirmPassword" 
-            });
+        const parsed = validate(changePasswordSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
-        
-        if (newPassword !== confirmPassword) {
-            return res.status(400).json({ 
-                message: "Nowe hasła nie są identyczne" 
-            });
-        }
-        
-        if (newPassword === oldPassword) {
-            return res.status(400).json({ 
-                message: "Nowe hasło musi być różne od starego" 
-            });
-        }
+
+        const { oldPassword, newPassword } = parsed.data;
         
         const user = await User.findById(userId);
         if (!user) {

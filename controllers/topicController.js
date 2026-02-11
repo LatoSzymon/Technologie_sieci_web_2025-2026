@@ -3,6 +3,13 @@ const User = require('../models/User');
 const Post = require("../models/Post");
 const Tag = require("../models/Tag");
 const TopicParticipant = require("../models/TopicParticipant");
+const {
+    createTopicSchema,
+    updateTopicSchema,
+    blockUserSchema,
+    moderatorChangeSchema
+} = require("../validation/schemas");
+const { validate } = require("../validation/validate");
 
 const getAllSubtopics = async (topicId) => {
     const topic = await Topic.findById(topicId);
@@ -62,11 +69,13 @@ const emitToTopicTree = async (io, topicId, event, payloadFactory) => {
 
 const blockUserInTopic = async (req, res) => {
     try {
-        const { topicId, userId, exceptTopicIds = [] } = req.body;
-        const currentUserId = req.user.userId;
-        if (!topicId || !userId) {
-            return res.status(400).json({ message: 'topicId i userId są wymagane' });
+        const parsed = validate(blockUserSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { topicId, userId, exceptTopicIds = [] } = parsed.data;
+        const currentUserId = req.user.userId;
         const topic = await Topic.findById(topicId);
         if (!topic) {
             return res.status(404).json({ message: 'Temat nie istnieje' });
@@ -168,11 +177,14 @@ const blockUserInTopic = async (req, res) => {
 
 const createTopic = async (req, res) => {
     try {
-        const {name, description, tags, parentId} = req.body;
-        const userId = req.user.userId;
-        if (!name) {
-            name = `Temat użytkownika ${req.user.login}`;
+        const parsed = validate(createTopicSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const {name, description, tags, parentId} = parsed.data;
+        const userId = req.user.userId;
+        const topicName = name || `Temat użytkownika ${req.user.login}`;
 
         let validatedTags = [];
         if (tags && Array.isArray(tags)) {
@@ -206,7 +218,7 @@ const createTopic = async (req, res) => {
         const inheritBannedUsersIds = parent ? [...parent.bannedUsersIds] : [];
 
         const topic = new Topic({
-            name, description: description || '', tags: validatedTags, ownerId: userId,
+            name: topicName, description: description || '', tags: validatedTags, ownerId: userId,
             moderatorsId: inheritModeratorsId.filter(id => !id.equals(userId)),
             bannedUsersIds: inheritBannedUsersIds,
             parent: parentId || null
@@ -302,11 +314,13 @@ const getTopicById = async (req, res) => {
 
 const unblockUserInTopic = async (req, res) => {
     try {
-        const { topicId, userId } = req.body;
-        const currentUserId = req.user.userId;
-        if (!topicId || !userId) {
-            return res.status(400).json({ message: 'topicId i userId są wymagane' });
+        const parsed = validate(blockUserSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { topicId, userId } = parsed.data;
+        const currentUserId = req.user.userId;
         const topic = await Topic.findById(topicId);
         if (!topic) {
             return res.status(404).json({ message: 'Temat nie istnieje' });
@@ -498,7 +512,12 @@ const updateTopic = async (req, res) => {
     try {
         const topicId = req.params.topicId;
         const userId = req.user.userId;
-        const { name, description } = req.body;
+        const parsed = validate(updateTopicSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
+        }
+
+        const { name, description } = parsed.data;
         
         const topic = await Topic.findById(topicId);
         if (!topic) {
@@ -553,14 +572,13 @@ const updateTopic = async (req, res) => {
 
 const promoteModerator = async (req, res) => {
     try {
-        const { topicId, userId } = req.body;
-        const currentUserId = req.user.userId;
-        
-        if (!topicId || !userId) {
-            return res.status(400).json({ 
-                message: "topicId i userId są wymagane" 
-            });
+        const parsed = validate(moderatorChangeSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { topicId, userId } = parsed.data;
+        const currentUserId = req.user.userId;
         
         const topic = await Topic.findById(topicId);
         if (!topic) {
@@ -634,14 +652,13 @@ const promoteModerator = async (req, res) => {
 
 const removeModerator = async (req, res) => {
     try {
-        const { topicId, userId } = req.body;
-        const currentUserId = req.user.userId;
-        
-        if (!topicId || !userId) {
-            return res.status(400).json({ 
-                message: "topicId i userId są wymagane" 
-            });
+        const parsed = validate(moderatorChangeSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { topicId, userId } = parsed.data;
+        const currentUserId = req.user.userId;
         
         const topic = await Topic.findById(topicId);
         if (!topic) {
@@ -710,13 +727,12 @@ const removeModerator = async (req, res) => {
 
 const transferTopicOwner = async (req, res) => {
     try {
-        const { topicId, userId } = req.body;
-
-        if (!topicId || !userId) {
-            return res.status(400).json({
-                message: "topicId i userId są wymagane"
-            });
+        const parsed = validate(moderatorChangeSchema, req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
+
+        const { topicId, userId } = parsed.data;
 
         if (req.user.role !== 'admin') {
             return res.status(403).json({
