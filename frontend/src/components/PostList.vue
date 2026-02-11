@@ -70,6 +70,7 @@ const pageSize = ref(15);
 const totalPosts = ref(0);
 const totalPages = ref(0);
 const isLoadingMore = ref(false);
+const isLoadingHistory = ref(false);
 
 const loadTags = async () => {
     if (!props.showForm) return;
@@ -209,6 +210,28 @@ const loadRemainingPages = async () => {
     }
 };
 
+const loadPreviousPages = async (startPage) => {
+    if (isLoadingHistory.value || startPage < 1) return;
+    isLoadingHistory.value = true;
+    try {
+        for (let page = startPage; page >= 1; page -= 1) {
+            const data = await postService.fetchPosts(props.topicId, page, pageSize.value);
+            postStore.setPosts({
+                topicId: props.topicId,
+                posts: data.posts || [],
+                page: currentPage.value || data.page || startPage,
+                pages: data.pages,
+                total: data.total,
+                mode: 'prepend'
+            });
+        }
+    } catch (err) {
+        console.error('Error loading previous pages:', err);
+    } finally {
+        isLoadingHistory.value = false;
+    }
+};
+
 
 const scrollToBottom = async () => {
     await nextTick();
@@ -238,6 +261,9 @@ const loadInitialPage = async () => {
         const data = await postService.getLastReadPage(props.topicId);
         const page = data?.page && data.page > 0 ? data.page : 1;
         await load(page, 'replace');
+        if (page > 1) {
+            await loadPreviousPages(page - 1);
+        }
     } catch (err) {
         await load(1, 'replace');
     }

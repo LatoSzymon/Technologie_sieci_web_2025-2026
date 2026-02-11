@@ -69,6 +69,30 @@ const useTopicsStore = defineStore("topics", () => {
         return updated;
     };
 
+    const setChildrenForTopic = (topicId, childrenList) => {
+        const targetId = normalizeTopicId(topicId);
+        if (!targetId) return null;
+        const nextChildren = Array.isArray(childrenList) ? childrenList : [];
+        let result = null;
+
+        const walk = (nodes) => {
+            for (const node of nodes || []) {
+                if (normalizeTopicId(node) === targetId) {
+                    node.children = nextChildren;
+                    result = node.children;
+                    return true;
+                }
+                if (node.children?.length && walk(node.children)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        walk(tree.value);
+        return result;
+    };
+
     const upsertTopicInTree = (topic) => {
         if (!topic) return { updated: false, inserted: false };
         const updated = updateTopicInTree(topic);
@@ -198,7 +222,8 @@ const useTopicsStore = defineStore("topics", () => {
             loading.value = true;
             error.value = null;
             const data = await listTopics({ parentId: topicId });
-            return data.topics || [];
+            const topicsList = data.topics || [];
+            return setChildrenForTopic(topicId, topicsList) || topicsList;
         } catch (err) {
             error.value = err.message;
             console.error('Error fetching children:', err);
@@ -293,6 +318,7 @@ const useTopicsStore = defineStore("topics", () => {
         fetchChildren,
         refreshRoot,
         updateTopicInTree,
+        setChildrenForTopic,
         upsertTopicInTree,
         removeTopicFromTree,
         mergeCurrentTopic,

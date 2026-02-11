@@ -307,7 +307,12 @@ const getTopicById = async (req, res) => {
         }
 
         if (topic.isHidden && req.user?.role !== 'admin') {
-            return res.status(403).json({message: "Ten temat jest ukryty"});
+            const userId = req.user?.userId;
+            const isOwner = userId && topic.ownerId?.equals?.(userId);
+            const isModerator = userId && topic.moderatorsId?.some(id => id.equals(userId));
+            if (!isOwner && !isModerator) {
+                return res.status(403).json({message: "Ten temat jest ukryty"});
+            }
         }
 
         return res.status(200).json(topic);

@@ -39,6 +39,8 @@ const filteredTree = computed(() => {
             return (matchesSearch && matchesTag) || filteredChildren.length > 0;
         }).map(node => ({
             ...node,
+            isClosed: !!node.isClosed,
+            isHidden: !!node.isHidden,
             children: filterNodes(node.children || [])
         }));
     }

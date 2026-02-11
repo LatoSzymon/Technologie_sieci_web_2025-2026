@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { authStore } from '../stores/auth';
 import { useTopicsStore } from '../stores/topics';
 import { closeTopic, openTopic, hideTopic, unhideTopic } from '../services/adminService';
@@ -20,6 +20,7 @@ const childrenLoading = ref(false);
 const childrenLoaded = ref(false);
 const childrenError = ref('');
 const error = ref('');
+const listenersRegistered = ref(false);
 
 const canModerate = computed(() => {
   if (!auth.user) return false;
@@ -97,11 +98,38 @@ const getTagName = (tag) => {
   return typeof tag === 'string' ? tag : tag.name;
 };
 
+const applyTopicUpdate = (payload) => {
+  if (payload?.topic) {
+    const incoming = { ...payload.topic };
+    const tagsAreIds = Array.isArray(incoming.tags)
+      && incoming.tags.length > 0
+      && incoming.tags.every(tag => typeof tag === 'string');
+
+    if (tagsAreIds) {
+      const existingNode = topics.getTopicFromTree?.(incoming._id);
+      if (existingNode?.tags?.length && typeof existingNode.tags[0] === 'object') {
+        incoming.tags = existingNode.tags;
+      } else if (topics.currentTopic?.tags?.length && typeof topics.currentTopic.tags[0] === 'object') {
+        incoming.tags = topics.currentTopic.tags;
+      }
+    }
+
+    topics.upsertTopicInTree(incoming);
+    topics.mergeCurrentTopic(incoming);
+    return;
+  }
+  if (payload?.topicId) {
+    topics.updateTopicInTree({ _id: payload.topicId, ...payload.patch });
+    topics.mergeCurrentTopic({ _id: payload.topicId, ...payload.patch });
+  }
+};
+
 const handleCloseTopic = async (e) => {
   e.stopPropagation();
   try {
     error.value = '';
-    await closeTopic(props.node._id);
+    const res = await closeTopic(props.node._id);
+    applyTopicUpdate({ topic: res?.topic, topicId: props.node._id, patch: { isClosed: true } });
   } catch (err) {
     error.value = 'Błąd podczas zamykania tematu';
     console.error(err);
@@ -112,7 +140,8 @@ const handleOpenTopic = async (e) => {
   e.stopPropagation();
   try {
     error.value = '';
-    await openTopic(props.node._id);
+    const res = await openTopic(props.node._id);
+    applyTopicUpdate({ topic: res?.topic, topicId: props.node._id, patch: { isClosed: false } });
   } catch (err) {
     error.value = 'Błąd podczas otwierania tematu';
     console.error(err);
@@ -123,7 +152,8 @@ const handleHideTopic = async (e) => {
   e.stopPropagation();
   try {
     error.value = '';
-    await hideTopic(props.node._id);
+    const res = await hideTopic(props.node._id);
+    applyTopicUpdate({ topic: res?.topic, topicId: props.node._id, patch: { isHidden: true } });
   } catch (err) {
     error.value = 'Błąd podczas ukrywania tematu';
     console.error(err);
@@ -134,7 +164,8 @@ const handleUnhideTopic = async (e) => {
   e.stopPropagation();
   try {
     error.value = '';
-    await unhideTopic(props.node._id);
+    const res = await unhideTopic(props.node._id);
+    applyTopicUpdate({ topic: res?.topic, topicId: props.node._id, patch: { isHidden: false } });
   } catch (err) {
     error.value = 'Błąd podczas odkrywania tematu';
     console.error(err);
@@ -142,7 +173,7 @@ const handleUnhideTopic = async (e) => {
 };
 
 const handleTopicSync = (data) => {
-  if (!childrenVisible.value) return;
+  if (!childrenLoaded.value) return;
 
   const targetId = data?.topic?._id || data?.topicId;
   if (!targetId) return;
@@ -181,20 +212,45 @@ const handleTopicSync = (data) => {
   }
 };
 
-onMounted(() => {
+const registerTopicListeners = () => {
+  if (listenersRegistered.value) return;
   socketStore.on('topic:updated', handleTopicSync);
   socketStore.on('topic:closed', handleTopicSync);
   socketStore.on('topic:opened', handleTopicSync);
   socketStore.on('topic:hidden', handleTopicSync);
   socketStore.on('topic:unhidden', handleTopicSync);
-});
+  listenersRegistered.value = true;
+};
 
-onBeforeUnmount(() => {
+const unregisterTopicListeners = () => {
+  if (!listenersRegistered.value) return;
   socketStore.off('topic:updated', handleTopicSync);
   socketStore.off('topic:closed', handleTopicSync);
   socketStore.off('topic:opened', handleTopicSync);
   socketStore.off('topic:hidden', handleTopicSync);
   socketStore.off('topic:unhidden', handleTopicSync);
+  listenersRegistered.value = false;
+};
+
+onMounted(() => {
+  if (socketStore.connected) {
+    registerTopicListeners();
+  }
+});
+
+watch(
+  () => socketStore.connected,
+  (isConnected) => {
+    if (isConnected) {
+      registerTopicListeners();
+    } else {
+      unregisterTopicListeners();
+    }
+  }
+);
+
+onBeforeUnmount(() => {
+  unregisterTopicListeners();
 });
 </script>
 

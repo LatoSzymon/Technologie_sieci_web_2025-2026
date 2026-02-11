@@ -147,7 +147,17 @@ export const useSocketStore = defineStore('socket', () => {
                 if (isHidden && !canSeeHidden) {
                     topicsStore.removeTopicFromTree(topicId);
                 } else {
-                    topicsStore.updateTopicInTree({ _id: topicId, isHidden });
+                    const updated = topicsStore.updateTopicInTree({ _id: topicId, isHidden });
+                    if (!updated && action === 'unhidden') {
+                        try {
+                            const fetched = await topicsStore.fetchTopicData(topicId);
+                            if (fetched) {
+                                topicsStore.upsertTopicInTree(fetched);
+                            }
+                        } catch (err) {
+                            console.warn('Failed to rehydrate unhidden topic:', err);
+                        }
+                    }
                 }
 
                 topicsStore.mergeCurrentTopic({ _id: topicId, isHidden });
