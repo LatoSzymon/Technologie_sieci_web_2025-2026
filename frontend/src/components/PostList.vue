@@ -85,6 +85,15 @@ const handleTagsChanged = () => {
     loadTags();
 };
 
+const persistLastPage = async (page) => {
+    if (!props.showPosts || !props.topicId) return;
+    try {
+        await postService.setLastReadPage(props.topicId, page);
+    } catch (err) {
+        console.warn('Nie udalo sie zapisac ostatniej strony', err);
+    }
+};
+
 const load = async (page = 1, mode = 'replace') => {
     try {
         const data = await postService.fetchPosts(props.topicId, page, pageSize.value);
@@ -99,6 +108,7 @@ const load = async (page = 1, mode = 'replace') => {
         currentPage.value = data.page || page;
         totalPosts.value = data.total || 0;
         totalPages.value = data.pages || 0;
+        await persistLastPage(currentPage.value);
     } catch (err) {
         console.error('Error loading posts:', err);
     }
@@ -208,9 +218,24 @@ const jumpToPost = async (postId) => {
     }
 }
 
+const loadInitialPage = async () => {
+    if (!props.showPosts || !props.topicId) {
+        await load(1, 'replace');
+        return;
+    }
+
+    try {
+        const data = await postService.getLastReadPage(props.topicId);
+        const page = data?.page && data.page > 0 ? data.page : 1;
+        await load(page, 'replace');
+    } catch (err) {
+        await load(1, 'replace');
+    }
+};
+
 onMounted(() => {
     console.log('Component mounted for topic:', props.topicId);
-    load(1, 'replace');
+    loadInitialPage();
 
     loadTags();
 
@@ -249,7 +274,7 @@ watch(() => props.topicId, (newTopicId, oldTopicId) => {
         socketStore.leaveTopic(oldTopicId);
     }
     if (newTopicId) {
-        load(1, 'replace');
+        loadInitialPage();
         if (socketStore.connected) {
             socketStore.joinTopic(newTopicId);
         }

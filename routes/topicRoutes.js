@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const passport = require("../passport");
 const { isApproved, isAdmin } = require("../middleware/authMiddleware");
-const { createTopic, closeTopic, openTopic, hideTopic, unhideTopic, listRootTopics, getTopicById, getPostsForTopic, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, transferTopicOwner, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants } = require("../controllers/topicController");
+const { createTopic, closeTopic, openTopic, hideTopic, unhideTopic, listRootTopics, getTopicById, getPostsForTopic, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, transferTopicOwner, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, getLastReadPage, setLastReadPage } = require("../controllers/topicController");
 const { writeLimiter } = require("../middleware/rateLimit");
 
 router.use(passport.authenticate('jwt', { session: false }), isApproved);
@@ -11,6 +11,8 @@ router.get("/tree/:topicId", getTopicSubtree);
 router.get("/", listRootTopics);
 router.post("/", writeLimiter, createTopic);
 router.get("/:topicId/posts", getPostsForTopic);
+router.get("/:topicId/last-page", getLastReadPage);
+router.post("/:topicId/last-page", writeLimiter, setLastReadPage);
 router.get("/:topicId/eligible-users", getEligibleUsersForModerator);
 router.get("/:topicId/users", getTopicUsers);
 router.get("/:topicId/participants", getTopicParticipants);

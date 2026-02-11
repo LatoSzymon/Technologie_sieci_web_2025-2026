@@ -459,11 +459,71 @@ const getPostsForTopic = async (req, res) => {
 
         const total = await Post.countDocuments({topicId, isDeleted: false});
 
+        try {
+            const userId = req.user?.userId;
+            if (userId) {
+                await User.updateOne(
+                    { _id: userId },
+                    { $set: { [`lastReadPage.${topicId}`]: page } }
+                );
+            }
+        } catch (updateError) {
+            console.error('Nie udalo sie zapisac ostatniej strony:', updateError);
+        }
+
         return res.status(200).json({message: `Lista postów dla tematu ${topicId}`, posts, page, total, pages: Math.ceil(total/limit)});
 
 
     } catch (err) {
         return res.status(500).json({message: "Problem z wylistowaniem postow dla danego tematu", err});
+    }
+};
+
+const getLastReadPage = async (req, res) => {
+    try {
+        const { topicId } = req.params;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ message: "Brak autoryzacji" });
+        }
+
+        const user = await User.findById(userId).select('lastReadPage');
+        if (!user) {
+            return res.status(404).json({ message: "Uzytkownik nie istnieje" });
+        }
+
+        const stored = user.lastReadPage?.get?.(topicId) ?? user.lastReadPage?.[topicId];
+        const page = stored ? Number(stored) : 1;
+
+        return res.status(200).json({ topicId, page });
+    } catch (error) {
+        return res.status(500).json({ message: "Blad przy pobieraniu ostatniej strony", error });
+    }
+};
+
+const setLastReadPage = async (req, res) => {
+    try {
+        const { topicId } = req.params;
+        const userId = req.user?.userId;
+        const page = parseInt(req.body?.page, 10);
+
+        if (!userId) {
+            return res.status(401).json({ message: "Brak autoryzacji" });
+        }
+
+        if (!Number.isFinite(page) || page < 1) {
+            return res.status(400).json({ message: "Nieprawidlowa strona" });
+        }
+
+        await User.updateOne(
+            { _id: userId },
+            { $set: { [`lastReadPage.${topicId}`]: page } }
+        );
+
+        return res.status(200).json({ topicId, page });
+    } catch (error) {
+        return res.status(500).json({ message: "Blad przy zapisie ostatniej strony", error });
     }
 };
 
@@ -1146,4 +1206,4 @@ const unhideTopic = async (req, res) => {
     }
 };
 
-module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, transferTopicOwner, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic, getAllSubtopics };
+module.exports = { createTopic, listRootTopics, getPostsForTopic, getTopicById, blockUserInTopic, unblockUserInTopic, getTopicTree, getTopicSubtree, updateTopic, promoteModerator, removeModerator, transferTopicOwner, getEligibleUsersForModerator, getTopicUsers, getTopicParticipants, closeTopic, openTopic, hideTopic, unhideTopic, getAllSubtopics, getLastReadPage, setLastReadPage };

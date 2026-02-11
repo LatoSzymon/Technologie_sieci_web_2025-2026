@@ -32,10 +32,22 @@ const toggleLike = async (postId) => {
     return res.data;
 };
 
+const getLastReadPage = async (topicId) => {
+    const res = await api.get(`/topics/${topicId}/last-page`);
+    return res.data;
+};
+
+const setLastReadPage = async (topicId, page) => {
+    const res = await api.post(`/topics/${topicId}/last-page`, { page });
+    return res.data;
+};
+
 export {
     fetchPosts,
     createPost,
     updatePost,
     deletePost,
-    toggleLike
+    toggleLike,
+    getLastReadPage,
+    setLastReadPage
 };
