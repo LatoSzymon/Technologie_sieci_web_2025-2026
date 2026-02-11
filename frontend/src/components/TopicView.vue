@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { useTopicsStore } from '../stores/topics';
 import { authStore } from '../stores/auth';
 import { closeTopic, openTopic, hideTopic, unhideTopic } from '../services/adminService';
+import tagService from '../services/tagService';
 import PostList from './PostList.vue';
 import TopicParticipantsModeration from './moderation/TopicParticipantsModeration.vue';
 import CreateTopicModal from './CreateTopicModal.vue';
@@ -117,6 +118,9 @@ const isEditingTopic = ref(false);
 const editForm = ref({ name: '', description: '' });
 const editError = ref('');
 const moderationError = ref('');
+const tagError = ref('');
+const tagSuccess = ref('');
+const newTagName = ref('');
 const postFormRef = ref(null);
 const showReplyJump = ref(true);
 let replyObserver = null;
@@ -236,6 +240,22 @@ const handleUnhideTopic = async () => {
 		await topics.fetchTopic(topics.currentTopic._id);
 	} catch (e) {
 		moderationError.value = e?.response?.data?.message || 'Błąd podczas odkrywania tematu';
+	}
+};
+
+const addScopedTag = async () => {
+	try {
+		tagError.value = '';
+		tagSuccess.value = '';
+		if (!newTagName.value.trim()) {
+			tagError.value = 'Podaj nazwe tagu';
+			return;
+		}
+		await tagService.createTag({ name: newTagName.value.trim(), topicId: topics.currentTopic?._id });
+		tagSuccess.value = 'Tag dodany do tego drzewa tematow';
+		newTagName.value = '';
+	} catch (e) {
+		tagError.value = e?.response?.data?.message || 'Blad dodawania tagu';
 	}
 };
 
@@ -446,6 +466,13 @@ onBeforeUnmount(() => {
 					<button @click="showPromoteModal = true" class="btn btn-block btn-info">Promuj</button>
 					<button @click="showCreateSubtopic = true" class="btn btn-block btn-primary">Stwórz podtemat</button>
 				</div>
+				<div class="tag-create">
+					<label class="form-label">Nowy tag dla drzewa:</label>
+					<input v-model="newTagName" type="text" class="form-input" placeholder="np. vue" />
+					<button @click="addScopedTag" class="btn btn-block btn-primary">Dodaj tag</button>
+					<div v-if="tagError" class="error-message">{{ tagError }}</div>
+					<div v-if="tagSuccess" class="success-message">{{ tagSuccess }}</div>
+				</div>
 			</div>
 
 			<div v-if="canModerate" class="sidebar-card participants-card">
@@ -524,6 +551,14 @@ onBeforeUnmount(() => {
 		padding: 10px;
 		margin: 10px 0;
 		border-left: 4px solid var(--danger);
+	}
+
+	.success-message {
+		background-color: rgba(111, 224, 129, 0.2);
+		color: var(--text);
+		padding: 10px;
+		margin: 10px 0;
+		border-left: 4px solid var(--success);
 	}
 
 	.topic-content {
@@ -885,6 +920,13 @@ onBeforeUnmount(() => {
 		display: flex;
 		gap: 10px;
 		flex-wrap: wrap;
+	}
+
+	.tag-create {
+		margin-top: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 	}
 
 	.mod-actions {

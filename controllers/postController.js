@@ -3,6 +3,7 @@ const Topic = require("../models/Topic");
 const TopicParticipant = require("../models/TopicParticipant");
 const { createPostSchema, updatePostSchema } = require("../validation/schemas");
 const { validate } = require("../validation/validate");
+const { getAllowedTagsForTopic } = require("../services/tagScope");
 
 const toId = v => (v?.toString ? v.toString() : String(v));
 const hasId = (arr, id) => arr?.some(x => toId(x) === toId(id));
@@ -45,6 +46,17 @@ const createPost = async (req, res) => {
 
         if (isUserBlockedInTopic(topic, authorId)) {
             return res.status(403).json({message:"Jestes zablokowany w tym temacie"});
+        }
+
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+            const allowedTags = await getAllowedTagsForTopic(topicId);
+            const allowedIds = new Set(
+                allowedTags.map(tag => (tag._id?.toString ? tag._id.toString() : String(tag._id)))
+            );
+            const invalid = tags.some(tagId => !allowedIds.has(tagId?.toString ? tagId.toString() : String(tagId)));
+            if (invalid) {
+                return res.status(400).json({ message: "Nieprawidlowe tagi dla tego tematu" });
+            }
         }
 
         const post = new Post({

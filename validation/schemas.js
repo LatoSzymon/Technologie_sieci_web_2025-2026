@@ -72,7 +72,12 @@ const moderatorChangeSchema = z.object({
   userId: objectId
 });
 
-const tagSchema = z.object({
+const createTagSchema = z.object({
+  name: z.string().min(2, "Nazwa tagu za krotka").max(40, "Nazwa tagu za dluga"),
+  topicId: objectId.optional().nullable()
+});
+
+const updateTagSchema = z.object({
   name: z.string().min(2, "Nazwa tagu za krotka").max(40, "Nazwa tagu za dluga")
 });
 
@@ -92,6 +97,7 @@ module.exports = {
   updateTopicSchema,
   blockUserSchema,
   moderatorChangeSchema,
-  tagSchema,
+  createTagSchema,
+  updateTagSchema,
   deleteUserSchema
 };

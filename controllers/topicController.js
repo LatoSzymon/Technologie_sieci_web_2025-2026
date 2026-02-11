@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Post = require("../models/Post");
 const Tag = require("../models/Tag");
 const TopicParticipant = require("../models/TopicParticipant");
+const { getAllowedTagsForTopic } = require("../services/tagScope");
 const {
     createTopicSchema,
     updateTopicSchema,
@@ -187,16 +188,14 @@ const createTopic = async (req, res) => {
         const topicName = name || `Temat użytkownika ${req.user.login}`;
 
         let validatedTags = [];
-        if (tags && Array.isArray(tags)) {
-            for (const tagId of tags) {
-                try {
-                    const tag = await Tag.findById(tagId);
-                    if (tag) {
-                        validatedTags.push(tagId);
-                    }
-                } catch (e) {
-                    console.warn(`Invalid tag ID: ${tagId}`);
-                }
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+            const allowedTags = await getAllowedTagsForTopic(parentId || null);
+            const allowedIds = new Set(
+                allowedTags.map(tag => (tag._id?.toString ? tag._id.toString() : String(tag._id)))
+            );
+            validatedTags = tags.filter(tagId => allowedIds.has(tagId?.toString ? tagId.toString() : String(tagId)));
+            if (validatedTags.length !== tags.length) {
+                return res.status(400).json({ message: "Nieprawidlowe tagi dla tego tematu" });
             }
         }
 

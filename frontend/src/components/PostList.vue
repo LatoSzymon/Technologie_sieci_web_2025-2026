@@ -74,7 +74,7 @@ const isLoadingMore = ref(false);
 const loadTags = async () => {
     if (!props.showForm) return;
     try {
-        const tags = await tagService.getTags();
+        const tags = await tagService.getTags(props.topicId);
         availableTags.value = tags;
     } catch (err) {
         console.error('Error loading tags:', err);

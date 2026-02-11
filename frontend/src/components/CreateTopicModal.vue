@@ -74,7 +74,7 @@ const socketStore = useSocketStore();
 const loadTags = async () => {
   loading.value = true;
   try {
-    const tags = await tagService.getTags();
+    const tags = await tagService.getTags(props.parentId || null);
     availableTags.value = tags;
   } catch (e) {
     error.value = 'Nie udało się pobrać tagów';
