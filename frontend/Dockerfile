@@ -27,4 +27,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 5173
 
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["serve", "-s", "dist", "-l", "5173", "--ssl-cert", "/app/certificate/server.crt", "--ssl-key", "/app/certificate/server.key"]

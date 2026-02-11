@@ -86,7 +86,7 @@ const fetchAllUsers = async () => {
 
 const fetchTags = async () => {
 	try {
-		tags.value = await tagService.getTags();
+		tags.value = await tagService.getTags(null, { all: true });
 	} catch (e) {
 		error.value = 'Błąd pobierania tagów';
 		console.error(e);

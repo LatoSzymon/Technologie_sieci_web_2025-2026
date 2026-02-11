@@ -14,14 +14,13 @@ services:
       MONGO_DATABASE: ProgTalk
       PORT: 3000
       HTTPS_PORT: 3443
-      API_HOST: localhost
       JWT_SECRET: aqqpaniekrooku
     depends_on:
       - mongodb
     networks:
       - progtalk-network
     volumes:
-      - ./certificate:/app/certificate
+      - ./certificate:/app/certificate:ro
 
   frontend:
     build:
@@ -38,6 +37,8 @@ services:
       - backend
     networks:
       - progtalk-network
+    volumes:
+      - ./certificate:/app/certificate:ro
 
   mongodb:
     image: mongo:7

@@ -1,10 +1,13 @@
 import api from './api';
 
 const tagService = {
-  async getTags(topicId) {
+  async getTags(topicId, options = {}) {
     const params = {};
     if (topicId) {
       params.topicId = topicId;
+    }
+    if (options.all) {
+      params.all = 'true';
     }
     const response = await api.get('/tags', { params });
     return response.data;

@@ -121,6 +121,7 @@ const moderationError = ref('');
 const tagError = ref('');
 const tagSuccess = ref('');
 const newTagName = ref('');
+const scopedTags = ref([]);
 const postFormRef = ref(null);
 const showReplyJump = ref(true);
 let replyObserver = null;
@@ -150,6 +151,23 @@ const scrollToReply = () => {
 
 const handlePromoted = () => {
 	topics.fetchTopic(route.params.id);
+};
+
+const loadScopedTags = async () => {
+	try {
+		if (!topics.currentTopic?._id) {
+			scopedTags.value = [];
+			return;
+		}
+		const tags = await tagService.getTags(topics.currentTopic._id);
+		if (auth.user?.role === 'admin') {
+			scopedTags.value = tags || [];
+		} else {
+			scopedTags.value = (tags || []).filter(tag => tag.scope === 'topic');
+		}
+	} catch (e) {
+		scopedTags.value = [];
+	}
 };
 
 const openRemoveModal = (moderator) => {
@@ -254,13 +272,27 @@ const addScopedTag = async () => {
 		await tagService.createTag({ name: newTagName.value.trim(), topicId: topics.currentTopic?._id });
 		tagSuccess.value = 'Tag dodany do tego drzewa tematow';
 		newTagName.value = '';
+		await loadScopedTags();
 	} catch (e) {
 		tagError.value = e?.response?.data?.message || 'Blad dodawania tagu';
 	}
 };
 
+const removeScopedTag = async (tagId) => {
+	try {
+		tagError.value = '';
+		tagSuccess.value = '';
+		await tagService.deleteTag(tagId);
+		tagSuccess.value = 'Tag usuniety';
+		await loadScopedTags();
+	} catch (e) {
+		tagError.value = e?.response?.data?.message || 'Blad usuwania tagu';
+	}
+};
+
 watch(() => topics.currentTopic, () => {
 	initEditForm();
+	loadScopedTags();
 	nextTick(() => {
 		const target = postFormRef.value?.$el;
 		if (!target) {
@@ -470,6 +502,15 @@ onBeforeUnmount(() => {
 					<label class="form-label">Nowy tag dla drzewa:</label>
 					<input v-model="newTagName" type="text" class="form-input" placeholder="np. vue" />
 					<button @click="addScopedTag" class="btn btn-block btn-primary">Dodaj tag</button>
+					<div v-if="scopedTags.length" class="scoped-tags">
+						<div class="scoped-tags-title">Tagi w tym drzewie:</div>
+						<div class="scoped-tags-list">
+							<span v-for="tag in scopedTags" :key="tag._id" class="scoped-tag">
+								#{{ tag.name }}
+								<button type="button" class="scoped-tag-remove" @click="removeScopedTag(tag._id)">x</button>
+							</span>
+						</div>
+					</div>
 					<div v-if="tagError" class="error-message">{{ tagError }}</div>
 					<div v-if="tagSuccess" class="success-message">{{ tagSuccess }}</div>
 				</div>
@@ -927,6 +968,45 @@ onBeforeUnmount(() => {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+	}
+
+	.scoped-tags {
+		background-color: rgba(229, 242, 103, 0.08);
+		border: 1px solid var(--border-soft);
+		padding: 10px;
+	}
+
+	.scoped-tags-title {
+		color: var(--accent);
+		font-weight: bold;
+		margin-bottom: 6px;
+	}
+
+	.scoped-tags-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.scoped-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: #0d3015;
+		color: var(--accent);
+		border: 1px solid var(--border-soft);
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-size: 0.85em;
+	}
+
+	.scoped-tag-remove {
+		background: none;
+		border: none;
+		color: var(--danger);
+		cursor: pointer;
+		font-weight: bold;
+		padding: 0 2px;
 	}
 
 	.mod-actions {

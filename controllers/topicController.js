@@ -1061,6 +1061,7 @@ const closeTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat został zamknięty"}
+                io.emit('topic:closed', payload);
                 await emitToTopicTree(io, topicId, 'topic:closed', (targetId) => ({
                     ...payload,
                     topicId: targetId
@@ -1110,6 +1111,7 @@ const openTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat został otwarty"}
+                io.emit('topic:opened', payload);
                 await emitToTopicTree(io, topicId, 'topic:opened', (targetId) => ({
                     ...payload,
                     topicId: targetId
@@ -1159,6 +1161,7 @@ const hideTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = { topicId, parentId: topic.parent, message: 'Ten temat został ukryty' };
+                io.emit('topic:hidden', payload);
                 await emitToTopicTree(io, topicId, 'topic:hidden', (targetId) => ({
                     ...payload,
                     topicId: targetId
@@ -1208,6 +1211,7 @@ const unhideTopic = async (req, res) => {
             const io = req.app.get && req.app.get('io');
             if (io) {
                 const payload = {topicId, parentId: topic.parent, message: "Ten temat jest teraz widoczny"}
+                io.emit('topic:unhidden', payload);
                 await emitToTopicTree(io, topicId, 'topic:unhidden', (targetId) => ({
                     ...payload,
                     topicId: targetId
