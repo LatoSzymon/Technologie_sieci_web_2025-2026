@@ -1,21 +1,21 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: progtalk-backend
+    restart: unless-stopped
     ports:
       - "3000:3000"
       - "3443:3443"
     environment:
-      - MONGO_HOST=mongodb
-      - MONGO_PORT=27017
-      - MONGO_DATABASE=ProgTalk
-      - PORT=3000
-      - HTTPS_PORT=3443
-      - API_HOST=localhost
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ProgTalk
+      PORT: 3000
+      HTTPS_PORT: 3443
+      API_HOST: localhost
+      JWT_SECRET: aqqpaniekrooku
     depends_on:
       - mongodb
     networks:
@@ -27,11 +27,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_HOST: localhost
+        VITE_API_PORT: 3443
     container_name: progtalk-frontend
+    restart: unless-stopped
     ports:
       - "5173:5173"
-    environment:
-      - VITE_API_URL=https://localhost:3443
     depends_on:
       - backend
     networks:
@@ -40,10 +42,11 @@ services:
   mongodb:
     image: mongo:7
     container_name: progtalk-mongodb
+    restart: unless-stopped
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_DATABASE=ProgTalk
+      MONGO_INITDB_DATABASE: ProgTalk
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb

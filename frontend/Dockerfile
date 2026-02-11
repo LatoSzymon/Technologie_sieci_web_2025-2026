@@ -1,15 +1,23 @@
-FROM node:18-alpine as builder
+FROM node:22-alpine as builder
 
 WORKDIR /app
 
+ARG VITE_API_HOST=localhost
+ARG VITE_API_PORT=3443
+ENV VITE_API_HOST=$VITE_API_HOST
+ENV VITE_API_PORT=$VITE_API_PORT
+
 COPY package*.json ./
+RUN npm ci
+
+COPY index.html ./
 COPY vite.config.js ./
 COPY src/ ./src/
 COPY public/ ./public/
 
-RUN npm install && npm run build
+RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
